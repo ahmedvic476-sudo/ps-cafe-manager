@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>PS Cafe Manager • V6.2.0</title>
+<title>PS Cafe Manager • V6.3.0</title>
 
 <!-- PWA Meta Tags -->
 <meta name="application-name" content="PS Cafe Manager">
@@ -391,6 +391,7 @@ td button{padding:6px 12px;font-size:12px}
     <section id="vInvoices" class="hidden"></section>
     <section id="vExpenses" class="hidden"></section>
     <section id="vReports" class="hidden"></section>
+    <section id="vAudit" class="hidden"></section>
     <section id="vUsers" class="hidden"></section>
     <section id="vSettings" class="hidden"></section>
   </div>
@@ -403,9 +404,9 @@ td button{padding:6px 12px;font-size:12px}
 // ============================================================
 // CORE STATE & STORAGE
 // ============================================================
-const APP_VERSION='V6.2.0';
+const APP_VERSION='V6.3.0';
 const K='ps_cafe_v4_state', SK='ps_cafe_v4_settings', QK='ps_cafe_v4_sync_queue', SMK='ps_cafe_v4_sync_meta';
-const CLOUD_TABLE='ps_business_state';
+const CLOUD_TABLE='ps_business_state', CLOUD_AUDIT_TABLE='ps_audit_logs';
 let state,user=null,tab='Dashboard',dirty=false,timer=null,swRegistration=null,installPromptEvent=null;
 
 function syncMeta(){try{return JSON.parse(localStorage.getItem(SMK))||{verified:false,lastSuccess:'',lastError:'',syncing:false}}catch(e){return{verified:false,lastSuccess:'',lastError:'',syncing:false}}}
@@ -435,12 +436,13 @@ function def(){
     products:['شاي:15','قهوة:25','نسكافيه:30','مياه:10','عصير:20','كانز:25'].map(x=>{
       let a=x.split(':');return{id:id(),name:a[0],price:+a[1],stock:0,active:true}
     }),
-    profile:{businessName:'PS Cafe',ownerName:'',phone:'',address:''},sessions:[],invoices:[],expenses:[],nextInvoice:1,updatedAt:new Date().toISOString()
+    profile:{businessName:'PS Cafe',ownerName:'',phone:'',address:''},sessions:[],invoices:[],expenses:[],auditLogs:[],nextInvoice:1,updatedAt:new Date().toISOString()
   }
 }
 
 function load(){try{state=JSON.parse(localStorage.getItem(K))||def()}catch(e){state=def()}
   if(!state.profile)state.profile={businessName:'PS Cafe',ownerName:'',phone:'',address:''};
+  if(!Array.isArray(state.auditLogs))state.auditLogs=[];
   state.users=(state.users||[]).map(u=>({...u,role:u.role==='Admin'?'Owner':u.role}));
   state.devices.forEach(d=>{if(!d.matchPrices)d.matchPrices=DEF_MATCH_PRICES.map(x=>({...x}))});
   save(false)
@@ -458,8 +460,17 @@ function owner(){return user&&['Owner','Admin'].includes(user.role)}
 function manager(){return user&&user.role==='Manager'}
 function cashier(){return user&&user.role==='Cashier'}
 function roleLabel(role){return ({Owner:'صاحب النشاط',Admin:'صاحب النشاط',Manager:'مدير',Cashier:'كاشير',Viewer:'مشاهدة فقط'}[role]||role)}
+function audit(action, entityType, entityId, summary, details={}){
+  if(!state)return null;
+  if(!Array.isArray(state.auditLogs))state.auditLogs=[];
+  const entry={id:id(),at:new Date().toISOString(),action,entityType,entityId:entityId||'',summary,details,actorId:user?.id||'',actor:user?.username||'system',actorRole:user?.role||'System',cloudSynced:false};
+  state.auditLogs.unshift(entry);
+  state.auditLogs=state.auditLogs.slice(0,2000);
+  return entry;
+}
+function invActor(i){return i.issuedBy||i.user||'غير محدد — بيانات سابقة'}
 function allowedTabs(){
-  if(owner())return ['Dashboard','Products','Devices','Invoices','Expenses','Reports','Users','Settings'];
+  if(owner())return ['Dashboard','Products','Devices','Invoices','Expenses','Reports','Audit','Users','Settings'];
   if(manager())return ['Dashboard','Products','Devices','Invoices','Expenses','Reports'];
   if(cashier())return ['Dashboard','Products','Invoices'];
   return ['Dashboard','Invoices','Reports'];
@@ -476,16 +487,17 @@ function login(){
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   tab='Dashboard';tabs();setup();
-  render();
+  audit('LOGIN','auth',x.id,'تسجيل دخول: '+x.username);
+  save();
   if(p==='1234')showNotice('تنبيه أمان: يجب على صاحب النشاط تغيير كلمة المرور الافتراضية قبل الاستخدام الحقيقي.', 'warn');
 }
-function logout(){user=null;document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden')}
+function logout(){if(user){audit('LOGOUT','auth',user.id,'تسجيل خروج: '+user.username);save();}user=null;document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden')}
 
 // ============================================================
 // TABS & RENDER
 // ============================================================
 function tabs(){
-  let all=[['Dashboard','🏠 الرئيسية'],['Products','🥤 المشروبات'],['Devices','🎮 الأجهزة'],['Invoices','🧾 الفواتير'],['Expenses','💸 المصروفات'],['Reports','📊 التقارير'],['Users','👥 المستخدمين'],['Settings','🏪 إدارة النشاط']];
+  let all=[['Dashboard','🏠 الرئيسية'],['Products','🥤 المشروبات'],['Devices','🎮 الأجهزة'],['Invoices','🧾 الفواتير'],['Expenses','💸 المصروفات'],['Reports','📊 التقارير'],['Audit','🛡️ سجل الحركات'],['Users','👥 المستخدمين'],['Settings','🏪 إدارة النشاط']];
   let allowed=allowedTabs();
   document.getElementById('tabs').innerHTML=all.filter(t=>allowed.includes(t[0])).map(t=>`<button class="tab ${tab==t[0]?'active':''}" onclick="show('${t[0]}')">${t[1]}</button>`).join('')
 }
@@ -502,9 +514,9 @@ function render(){
   else if(sm.verified&&sm.lastSuccess){sl.textContent='محفوظ ✓';sl.className='sync private-cloud';}
   else if(sm.verified){sl.textContent='متصل ✓';sl.className='sync private-cloud';}
   else{sl.textContent='غير مفعّل';sl.className='sync unknown';}
-  ['Dashboard','Products','Devices','Invoices','Expenses','Reports','Users','Settings'].forEach(x=>document.getElementById('v'+x).classList.add('hidden'));
+  ['Dashboard','Products','Devices','Invoices','Expenses','Reports','Audit','Users','Settings'].forEach(x=>document.getElementById('v'+x).classList.add('hidden'));
   document.getElementById('v'+tab).classList.remove('hidden');
-  rDash();rProducts();rDevices();rInvoices();rExpenses();rReports();rUsers();rSettings();
+  rDash();rProducts();rDevices();rInvoices();rExpenses();rReports();rAudit();rUsers();rSettings();
 }
 
 // 1-second tick
@@ -748,6 +760,7 @@ function rDash(){
             <div>العميل: <strong>${s.customer||'—'}</strong></div>
             <div>النظام: <strong>${s.mode==='multi'?'Multi Player':'Single Player'}</strong></div>
             <div>البداية: <strong>${fmt(s.start)}</strong></div>
+            <div>بدأها: <strong>${esc(s.startedBy||s.user||'غير محدد')}</strong></div>
           </div>
           ${s.sessionType==='match'?matchProgressBar(s):''}
           <div class="session-timer ${timerCls}">${
@@ -805,8 +818,10 @@ function toggleMode(m){
 }
 function start(){
   let did=val('sd');if(!did)return alert('اختار جهاز');
-  state.sessions.push({id:id(),deviceId:did,customer:val('sc'),mode:val('sm'),sessionType:'open',items:[],start:new Date().toISOString(),status:'open',user:user.username});
-  state.devices.find(d=>d.id==did).status='busy';
+  const d=state.devices.find(x=>x.id==did),sid=id(),when=new Date().toISOString();
+  state.sessions.push({id:sid,deviceId:did,customer:val('sc'),mode:val('sm'),sessionType:'open',items:[],start:when,status:'open',user:user.username,startedBy:user.username,startedById:user.id||''});
+  d.status='busy';
+  audit('SESSION_START','session',sid,'بدء جلسة مفتوحة على '+d.name,{deviceId:did,deviceName:d.name,mode:val('sm')});
   closeM();save();
 }
 
@@ -885,8 +900,10 @@ function startMatch(){
   let price=+val('sel-match-price');
   if(!mins||!price)return alert('اختار مدة المباراة');
   let sid=id();
-  state.sessions.push({id:sid,deviceId:did,customer:val('msc'),mode:document.getElementById('msm').value,sessionType:'match',matchMins:mins,matchPrice:price,items:[],start:new Date().toISOString(),status:'open',user:user.username});
-  state.devices.find(d=>d.id==did).status='busy';
+  const d=state.devices.find(x=>x.id==did);
+  state.sessions.push({id:sid,deviceId:did,customer:val('msc'),mode:document.getElementById('msm').value,sessionType:'match',matchMins:mins,matchPrice:price,items:[],start:new Date().toISOString(),status:'open',user:user.username,startedBy:user.username,startedById:user.id||''});
+  d.status='busy';
+  audit('MATCH_START','session',sid,'بدء مباراة على '+d.name,{deviceId:did,deviceName:d.name,minutes:mins,price:price});
   closeM();save();
 }
 
@@ -907,17 +924,19 @@ function drinkModal(sid){
     </table></div>
     <br><button class="gray" onclick="closeM()">إغلاق</button>`);
 }
-function addDrink(sid){let s=state.sessions.find(x=>x.id==sid),p=state.products.find(x=>x.id==val('dp')),q=+val('dq')||1;s.items.push({productId:p.id,name:p.name,price:+p.price,qty:q});save();drinkModal(sid)}
-function remDrink(sid,n){let s=state.sessions.find(x=>x.id==sid);s.items.splice(n,1);save();drinkModal(sid)}
+function addDrink(sid){let s=state.sessions.find(x=>x.id==sid),p=state.products.find(x=>x.id==val('dp')),q=+val('dq')||1;if(!s||!p)return;s.items.push({productId:p.id,name:p.name,price:+p.price,qty:q,addedBy:user.username,addedAt:new Date().toISOString()});audit('SESSION_ITEM_ADD','session',sid,'إضافة '+q+' × '+p.name+' للجلسة',{productId:p.id,qty:q,price:+p.price});save();drinkModal(sid)}
+function remDrink(sid,n){let s=state.sessions.find(x=>x.id==sid),removed=s?.items?.[n];if(!s||!removed)return;s.items.splice(n,1);audit('SESSION_ITEM_REMOVE','session',sid,'حذف '+removed.name+' من الجلسة',{productId:removed.productId,qty:removed.qty,price:removed.price});save();drinkModal(sid)}
 
 // ============================================================
 // END SESSION & INVOICE
 // ============================================================
 function endSession(sid){
   let s=state.sessions.find(x=>x.id==sid),d=state.devices.find(x=>x.id==s.deviceId),c=cost(s);
-  let inv={id:id(),no:state.nextInvoice++,date:new Date().toISOString(),deviceId:d.id,deviceName:d.name,customer:s.customer,mode:s.mode,sessionType:s.sessionType||'open',matchMins:s.matchMins||null,start:s.start,end:new Date().toISOString(),minutes:c.m,playTotal:+c.play.toFixed(2),drinkTotal:+c.dr.toFixed(2),total:+c.total.toFixed(2),items:s.items,payment:'Cash',user:user.username};
-  s.status='closed';s.end=inv.end;d.status='available';
+  const now=new Date().toISOString();
+  let inv={id:id(),no:state.nextInvoice++,date:now,deviceId:d.id,deviceName:d.name,customer:s.customer,mode:s.mode,sessionType:s.sessionType||'open',matchMins:s.matchMins||null,start:s.start,end:now,minutes:c.m,playTotal:+c.play.toFixed(2),drinkTotal:+c.dr.toFixed(2),total:+c.total.toFixed(2),items:s.items,payment:'Cash',user:user.username,issuedBy:user.username,issuedById:user.id||'',startedBy:s.startedBy||s.user||'',startedById:s.startedById||''};
+  s.status='closed';s.end=inv.end;s.endedBy=user.username;s.invoiceId=inv.id;d.status='available';
   state.invoices.push(inv);
+  audit('INVOICE_CREATE','invoice',inv.id,'إنشاء فاتورة #'+inv.no+' بواسطة '+user.username,{invoiceNo:inv.no,deviceId:d.id,deviceName:d.name,total:inv.total,sessionId:s.id});
   // clear alert tracking
   delete alertedSessions[sid];
   save();showInv(inv.id);
@@ -926,6 +945,8 @@ function showInv(iid){
   let i=state.invoices.find(x=>x.id==iid);
   modal(`<div class="big">🧾 فاتورة رقم ${i.no}</div>
     <div class="invoice-row"><span>التاريخ</span><span>${fmt(i.date)}</span></div>
+    <div class="invoice-row"><span>أنشأ الفاتورة</span><strong>${esc(invActor(i))}</strong></div>
+    <div class="invoice-row"><span>بدأ الجلسة</span><span>${esc(i.startedBy||'غير محدد — بيانات سابقة')}</span></div>
     <div class="invoice-row"><span>الجهاز</span><span>${i.deviceName} — ${i.mode}</span></div>
     ${i.sessionType==='match'?`<div class="invoice-row"><span>نوع الجلسة</span><span>⚽ مباراة ${i.matchMins} دقيقة</span></div>`:''}
     <div class="invoice-row"><span>العميل</span><span>${i.customer||'—'}</span></div>
@@ -945,7 +966,7 @@ function printInvoice(iid){
   w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>فاتورة رقم ${i.no}</title><style>
   *{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#111;margin:0;padding:18px;background:#fff}.receipt{max-width:760px;margin:0 auto;border:1px solid #ddd;padding:22px}.head{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:15px}.head h1{font-size:23px;margin:0 0 4px}.muted{color:#555;font-size:12px}.row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dashed #bbb;font-size:14px}.total{font-size:20px;font-weight:700;border-top:2px solid #111;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between}table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}th,td{padding:7px 5px;border-bottom:1px solid #ddd;text-align:right}th{background:#f5f5f5}.print-actions{text-align:center;margin:18px 0}button{padding:10px 20px;border:0;background:#155eef;color:#fff;border-radius:6px;font-weight:700}@page{size:auto;margin:12mm}@media print{.print-actions{display:none}.receipt{border:none;padding:0;max-width:none}}
   </style></head><body><div class="receipt"><div class="head"><h1>PS Cafe Manager</h1><div class="muted">فاتورة رقم #${i.no} • ${esc(fmt(i.date))}</div></div>
-  <div class="row"><span>الجهاز</span><strong>${esc(i.deviceName)} — ${esc(i.mode)}</strong></div>${i.sessionType==='match'?`<div class="row"><span>نوع الجلسة</span><strong>مباراة ${i.matchMins} دقيقة</strong></div>`:''}<div class="row"><span>العميل</span><strong>${esc(i.customer||'—')}</strong></div><div class="row"><span>المدة الفعلية</span><strong>${i.minutes} دقيقة</strong></div><div class="row"><span>رسوم اللعب</span><strong>${money(i.playTotal)} ج</strong></div>${itemRows?`<table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${itemRows}</tbody></table>`:''}<div class="row"><span>رسوم المشروبات</span><strong>${money(i.drinkTotal)} ج</strong></div><div class="total"><span>الإجمالي</span><span>${money(i.total)} ج</span></div></div><div class="print-actions"><button onclick="window.print()">طباعة / حفظ PDF</button></div></body></html>`);
+  <div class="row"><span>أنشأ الفاتورة</span><strong>${esc(invActor(i))}</strong></div><div class="row"><span>بدأ الجلسة</span><strong>${esc(i.startedBy||'غير محدد — بيانات سابقة')}</strong></div><div class="row"><span>الجهاز</span><strong>${esc(i.deviceName)} — ${esc(i.mode)}</strong></div>${i.sessionType==='match'?`<div class="row"><span>نوع الجلسة</span><strong>مباراة ${i.matchMins} دقيقة</strong></div>`:''}<div class="row"><span>العميل</span><strong>${esc(i.customer||'—')}</strong></div><div class="row"><span>المدة الفعلية</span><strong>${i.minutes} دقيقة</strong></div><div class="row"><span>رسوم اللعب</span><strong>${money(i.playTotal)} ج</strong></div>${itemRows?`<table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${itemRows}</tbody></table>`:''}<div class="row"><span>رسوم المشروبات</span><strong>${money(i.drinkTotal)} ج</strong></div><div class="total"><span>الإجمالي</span><span>${money(i.total)} ج</span></div></div><div class="print-actions"><button onclick="window.print()">طباعة / حفظ PDF</button></div></body></html>`);
   w.document.close();w.focus();
 }
 
@@ -971,7 +992,7 @@ function prodModal(pid=''){let p=state.products.find(x=>x.id==pid)||{name:'',pri
     </div><br>
     <div class="row"><button class="ok" onclick="saveProd('${pid}')">💾 حفظ</button><button class="gray" onclick="closeM()">إلغاء</button></div>`);
 }
-function saveProd(pid){let o={name:val('pn'),price:+val('pp'),stock:+val('ps'),active:val('pa')==='true'};if(pid)Object.assign(state.products.find(x=>x.id==pid),o);else state.products.push({id:id(),...o});closeM();save()}
+function saveProd(pid){let o={name:val('pn'),price:+val('pp'),stock:+val('ps'),active:val('pa')==='true'};if(pid){let p=state.products.find(x=>x.id==pid),before={name:p.name,price:p.price,stock:p.stock,active:p.active};Object.assign(p,o);audit('PRODUCT_EDIT','product',pid,'تعديل منتج: '+o.name,{before,after:o});}else{let newId=id();state.products.push({id:newId,...o});audit('PRODUCT_ADD','product',newId,'إضافة منتج: '+o.name,{after:o});}closeM();save()}
 
 // ============================================================
 // DEVICES PAGE (with Add Device + Match Pricing editor)
@@ -1010,19 +1031,25 @@ function saveNewDevice(){
   let name=val('nd_name').trim();
   if(!name)return alert('اكتب اسم الجهاز');
   let newId='ps_'+id().slice(3,9);
-  state.devices.push({id:newId,name,status:'available',singleRate:+val('nd_single')||60,multiRate:+val('nd_multi')||90,matchPrices:DEF_MATCH_PRICES.map(x=>({...x}))});
+  const dev={id:newId,name,status:'available',singleRate:+val('nd_single')||60,multiRate:+val('nd_multi')||90,matchPrices:DEF_MATCH_PRICES.map(x=>({...x}))};
+  state.devices.push(dev);
+  audit('DEVICE_ADD','device',newId,'إضافة جهاز: '+name,{singleRate:dev.singleRate,multiRate:dev.multiRate});
   closeM();save();show('Devices');
 }
 function delDevice(did){
   if(sess(did))return alert('الجهاز عليه جلسة مفتوحة، أنهِ الجلسة أولاً');
   if(!confirm('حذف الجهاز؟'))return;
+  const d=state.devices.find(x=>x.id===did);
   state.devices=state.devices.filter(d=>d.id!==did);
+  audit('DEVICE_DELETE','device',did,'حذف جهاز: '+(d?.name||did),{});
   save();show('Devices');
 }
 function saveDev(did){
   let d=state.devices.find(x=>x.id==did);
   if(sess(did)&&val('dt'+did)!=='busy')return alert('الجهاز عليه جلسة مفتوحة');
+  const before={name:d.name,singleRate:d.singleRate,multiRate:d.multiRate,status:d.status};
   d.name=val('dn'+did);d.singleRate=+val('ds'+did);d.multiRate=+val('dm'+did);d.status=val('dt'+did);
+  audit('DEVICE_EDIT','device',did,'تعديل جهاز: '+d.name,{before,after:{name:d.name,singleRate:d.singleRate,multiRate:d.multiRate,status:d.status}});
   save();
 }
 
@@ -1042,11 +1069,13 @@ function editMatchPrices(did){
 }
 function saveMatchPrices(did,count){
   let d=state.devices.find(x=>x.id==did);
+  const before=JSON.parse(JSON.stringify(d.matchPrices||[]));
   let minsOptions=[15,30,45,60];
   d.matchPrices=[];
   for(let i=0;i<count;i++){
     d.matchPrices.push({mins:minsOptions[i]||((i+1)*15),single:+document.getElementById('mp_s_'+i)?.value||0,multi:+document.getElementById('mp_m_'+i)?.value||0});
   }
+  audit('DEVICE_PRICE_EDIT','device',did,'تعديل أسعار المباريات: '+d.name,{before,after:d.matchPrices});
   closeM();save();
 }
 
@@ -1057,12 +1086,13 @@ function rInvoices(){vInvoices.innerHTML=`
   <div class="page-header">
     <div class="page-header-left"><div class="section-title">🧾 الفواتير</div><div class="page-subtitle muted">سجل جميع الجلسات المكتملة</div></div>
   </div>
-  <div class="tw"><table><tr><th>#</th><th>التاريخ</th><th>الجهاز</th><th>العميل</th><th>النوع</th><th>المدة</th><th>الإجمالي</th><th></th></tr>
+  <div class="tw"><table><tr><th>#</th><th>التاريخ</th><th>الجهاز</th><th>العميل</th><th>النوع</th><th>المدة</th><th>الإجمالي</th><th>أنشأها</th><th></th></tr>
   ${[...state.invoices].reverse().map(i=>`<tr>
     <td><strong>#${i.no}</strong></td><td>${fmt(i.date)}</td><td>${i.deviceName}</td><td>${i.customer||'—'}</td>
     <td>${i.sessionType==='match'?`<span class="match-badge">⚽ ${i.matchMins}د</span>`:'<span class="badge b-ok">مفتوحة</span>'}</td>
     <td>${i.minutes} د</td>
     <td><strong style="color:var(--green)">${money(i.total)} ج</strong></td>
+    <td><span class="badge b-ok">${esc(invActor(i))}</span></td>
     <td><button onclick="showInv('${i.id}')">🧾 عرض</button></td>
   </tr>`).join('')}
   </table></div>`
@@ -1088,8 +1118,8 @@ function expModal(){modal(`<div class="big">➕ إضافة مصروف</div>
     <div class="col"><label>البيان</label><input id="en" placeholder="تفاصيل إضافية"></div>
   </div><br>
   <div class="row"><button class="ok" onclick="saveExp()">💾 حفظ</button><button class="gray" onclick="closeM()">إلغاء</button></div>`)}
-function saveExp(){state.expenses.push({id:id(),date:val('ed'),type:val('et'),amount:+val('ea'),note:val('en')});closeM();save()}
-function delExp(idv){state.expenses=state.expenses.filter(e=>e.id!==idv);save()}
+function saveExp(){const expense={id:id(),date:val('ed'),type:val('et'),amount:+val('ea'),note:val('en'),createdBy:user.username,createdAt:new Date().toISOString()};state.expenses.push(expense);audit('EXPENSE_ADD','expense',expense.id,'إضافة مصروف: '+expense.type,{amount:expense.amount,note:expense.note});closeM();save()}
+function delExp(idv){const expense=state.expenses.find(e=>e.id===idv);state.expenses=state.expenses.filter(e=>e.id!==idv);audit('EXPENSE_DELETE','expense',idv,'حذف مصروف: '+(expense?.type||idv),{amount:expense?.amount||0});save()}
 
 // ============================================================
 // REPORTS
@@ -1114,6 +1144,18 @@ function rReports(){
       <div class="kpi"><div class="kpi-label">جلسات مفتوحة</div><b>${open}</b></div>
       <div class="kpi" style="--kpi-c:var(--purple)"><div class="kpi-label">مباريات</div><b style="color:#a78bfa">${matches}</b></div>
     </div>`;
+}
+
+// ============================================================
+// AUDIT LOG — OWNER ONLY
+// ============================================================
+function actionLabel(a){return ({LOGIN:'تسجيل دخول',LOGOUT:'تسجيل خروج',SESSION_START:'بدء جلسة',MATCH_START:'بدء مباراة',SESSION_ITEM_ADD:'إضافة مشروب للجلسة',SESSION_ITEM_REMOVE:'حذف مشروب من الجلسة',INVOICE_CREATE:'إنشاء فاتورة',PRODUCT_ADD:'إضافة منتج',PRODUCT_EDIT:'تعديل منتج',DEVICE_ADD:'إضافة جهاز',DEVICE_EDIT:'تعديل جهاز',DEVICE_DELETE:'حذف جهاز',DEVICE_PRICE_EDIT:'تعديل أسعار جهاز',EXPENSE_ADD:'إضافة مصروف',EXPENSE_DELETE:'حذف مصروف',USER_ADD:'إضافة مستخدم',USER_EDIT:'تعديل مستخدم',PROFILE_EDIT:'تعديل بيانات النشاط'}[a]||a)}
+function rAudit(){
+  if(!owner()){vAudit.innerHTML='';return;}
+  const logs=(state.auditLogs||[]).slice(0,300);
+  vAudit.innerHTML=`<div class="page-header"><div class="page-header-left"><div class="section-title">🛡️ سجل الحركات</div><div class="page-subtitle muted">من نفّذ كل إجراء ومتى — يظهر لصاحب النشاط فقط</div></div><span class="owner-only-tag">OWNER ONLY</span></div>
+  <div class="settings-note">يتم تسجيل الجلسات والفواتير والمشروبات والأسعار والمصروفات وإدارة الأجهزة. عند تفعيل قاعدة البيانات الآمنة تُرفع السجلات لسجل لا يسمح للكاشير بتعديله أو حذفه.</div>
+  <div class="tw"><table><tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th></tr>${logs.length?logs.map(l=>`<tr><td>${fmt(l.at)}</td><td><strong>${esc(l.actor||'غير محدد')}</strong><br><span class="small muted">${esc(roleLabel(l.actorRole||''))}</span></td><td>${esc(actionLabel(l.action))}</td><td>${esc(l.summary||'')}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">لا توجد حركات مسجلة بعد.</td></tr>'}</table></div>`;
 }
 
 // ============================================================
@@ -1149,7 +1191,8 @@ function saveUser(uid){
   if(!pw||pw.length<6)return showNotice('استخدم كلمة مرور لا تقل عن 6 أحرف.', 'danger');
   if(state.users.some(u=>u.username.toLowerCase()==n.toLowerCase()&&u.id!==uid))return showNotice('اسم المستخدم موجود بالفعل.', 'danger');
   let o={username:n,password:pw,role:val('ur'),active:val('ua')==='true'};
-  if(uid)Object.assign(state.users.find(x=>x.id==uid),o);else state.users.push({id:id(),...o});
+  if(uid){let target=state.users.find(x=>x.id==uid),before={username:target.username,role:target.role,active:target.active};Object.assign(target,o);audit('USER_EDIT','user',uid,'تعديل مستخدم: '+n,{before,after:{username:n,role:o.role,active:o.active}});}
+  else{let newId=id();state.users.push({id:newId,...o});audit('USER_ADD','user',newId,'إضافة مستخدم: '+n,{role:o.role,active:o.active});}
   closeM();save();
 }
 
@@ -1232,7 +1275,9 @@ function rSettings(){
 }
 function saveBusinessProfile(){
   if(!owner())return;
+  const before={...state.profile};
   state.profile={businessName:val('businessName').trim()||'PS Cafe',ownerName:val('ownerName').trim(),phone:val('businessPhone').trim(),address:val('businessAddress').trim()};
+  audit('PROFILE_EDIT','profile','business','تعديل بيانات النشاط',{before,after:{...state.profile}});
   save();showNotice('تم حفظ بيانات النشاط.', 'success');
 }
 function currentCloudInputs(){return {mode:val('mode')||st().mode,url:val('url').trim().replace(/\/$/,''),key:val('key').trim(),businessId:val('businessId').trim(),cloudEmail:val('cloudEmail').trim(),session:st().session}}
@@ -1326,6 +1371,15 @@ async function req(m,path,body){
   try{return raw?JSON.parse(raw):[]}catch(e){return []}
 }
 function cloudState(){const copy=JSON.parse(JSON.stringify(state));delete copy.users;return copy}
+async function pushCloudAuditLogs(){
+  const pending=(state.auditLogs||[]).filter(l=>!l.cloudSynced);
+  if(!pending.length)return;
+  const s=st(),token=await ensureCloudToken();
+  const rows=pending.map(l=>({id:l.id,business_id:s.businessId,occurred_at:l.at,actor_label:l.actor,actor_role:l.actorRole,action:l.action,entity_type:l.entityType,entity_id:l.entityId||null,summary:l.summary,details:l.details||{}}));
+  let r;try{r=await fetch(s.url+'/rest/v1/'+CLOUD_AUDIT_TABLE+'?on_conflict=id',{method:'POST',headers:{apikey:s.key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(rows)})}catch(e){throw Error('تعذر رفع سجل الحركات. افحص الإنترنت.');}
+  const raw=await r.text();if(!r.ok)throw Error(friendlySyncError(r.status,raw));
+  const ids=new Set(pending.map(l=>l.id));state.auditLogs=(state.auditLogs||[]).map(l=>ids.has(l.id)?{...l,cloudSynced:true}:l);localStorage.setItem(K,JSON.stringify(state));
+}
 function applyCloudState(cloud){const localUsers=state.users;state={...cloud,users:localUsers,profile:cloud.profile||state.profile};localStorage.setItem(K,JSON.stringify(state))}
 async function testSupabaseConnection(){
   setSyncMeta({syncing:true,lastError:''});let s=st();
@@ -1338,6 +1392,7 @@ async function loadCloud(){
 }
 async function saveCloud(){
   let s=st();await req('POST',`${CLOUD_TABLE}?on_conflict=business_id`,[{business_id:s.businessId,data:cloudState(),updated_at:new Date().toISOString()}]);
+  await pushCloudAuditLogs();
   dirty=false;setQueue([]);setSyncMeta({verified:true,syncing:false,lastSuccess:new Date().toISOString(),lastError:''});render();return true;
 }
 async function flushQueue(){
@@ -1375,7 +1430,7 @@ load();setup();
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('./sw.js?v=6.2.0')
+    navigator.serviceWorker.register('./sw.js?v=6.3.0')
       .then(reg=>{
         swRegistration=reg;
         console.log('SW registered:', reg.scope, APP_VERSION);

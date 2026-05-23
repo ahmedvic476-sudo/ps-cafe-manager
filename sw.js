@@ -2,7 +2,7 @@
 // PS Cafe Manager — Service Worker
 // Version: 6.2.0 OWNER BRANDING SECURE FOUNDATION
 // ============================================================
-const CACHE_NAME = 'ps-cafe-v6.2.0';
+const CACHE_NAME = 'ps-cafe-v6.3.0';
 const OFFLINE_URL = './index.html?v=6.2.0';
 const PRECACHE_ASSETS = [
   './', './index.html?v=6.2.0', './manifest.json?v=6.2.0',

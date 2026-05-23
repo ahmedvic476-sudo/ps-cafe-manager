@@ -1,8 +1,8 @@
 {
   "name": "PS Cafe Manager",
   "short_name": "PS Cafe",
-  "description": "إدارة كافيه بلايستيشن — جلسات ومباريات وفواتير وتقارير • V6.1.2",
-  "start_url": "./index.html?source=pwa&v=6.1.2",
+  "description": "إدارة تشغيل كافيه بلايستيشن وفواتيره — إصدار المالك V6.3.0",
+  "start_url": "./index.html?source=pwa&v=6.2.0",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -66,7 +66,7 @@
   ],
   "screenshots": [
     {
-      "src": "icon-512.png",
+      "src": "brand-avatar.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow"
