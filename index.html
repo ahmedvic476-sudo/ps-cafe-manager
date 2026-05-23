@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PS Cafe Manager</title>
+
+<!-- PWA Meta Tags -->
+<meta name="application-name" content="PS Cafe Manager">
+<meta name="description" content="إدارة كافيه بلايستيشن - جلسات مباريات فواتير تقارير">
+<meta name="theme-color" content="#060b14">
+<meta name="background-color" content="#060b14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PS Cafe">
+<meta name="msapplication-TileColor" content="#060b14">
+<meta name="msapplication-tap-highlight" content="no">
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Apple Touch Icons -->
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-base:#060b14;--bg-surface:#0d1623;--bg-card:#111d2e;--bg-card-hover:#162338;--bg-elevated:#1a2840;
+  --border:#1e3050;--border-light:#243a5e;
+  --blue:#2979ff;--blue-dark:#1a5fff;--blue-glow:rgba(41,121,255,0.18);--blue-dim:#163a80;
+  --green:#00c853;--green-dark:#00a040;--green-dim:#003d1a;--green-glow:rgba(0,200,83,0.15);
+  --red:#ff3d57;--red-dark:#cc2040;--red-dim:#4a0a12;
+  --orange:#ff9800;--orange-dim:#4a2800;
+  --yellow:#ffd600;--yellow-dim:#3d3000;
+  --purple:#7c3aed;--purple-dim:#2d1660;
+  --text-primary:#e8f0fe;--text-secondary:#8ba3c7;--text-muted:#4a6080;
+  --shadow-card:0 4px 24px rgba(0,0,0,0.5);
+  --radius:14px;--radius-sm:8px;--radius-lg:18px;--transition:0.18s ease;
+}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg-base);color:var(--text-primary);line-height:1.6;min-height:100vh;font-size:15px;}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg-surface)}
+::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--blue)}
+
+/* LOGIN */
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:radial-gradient(ellipse 60% 50% at 30% 40%,rgba(41,121,255,0.08) 0%,transparent 60%),
+  radial-gradient(ellipse 50% 60% at 80% 70%,rgba(124,58,237,0.06) 0%,transparent 60%),var(--bg-base);
+  position:relative;overflow:hidden;}
+.login::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(30,48,80,0.2) 60px,rgba(30,48,80,0.2) 61px),
+  repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(30,48,80,0.2) 60px,rgba(30,48,80,0.2) 61px);pointer-events:none;}
+.login-box{background:var(--bg-card);border:1px solid var(--border-light);border-radius:22px;padding:40px 36px;width:min(440px,100%);
+  box-shadow:0 24px 64px rgba(0,0,0,0.7),0 0 0 1px rgba(41,121,255,0.08);position:relative;z-index:1;}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-icon{font-size:52px;display:block;margin-bottom:10px;filter:drop-shadow(0 0 20px rgba(41,121,255,0.5));}
+.login-title{font-size:22px;font-weight:800;color:var(--text-primary);letter-spacing:0.5px;}
+.login-sub{font-size:13px;color:var(--text-muted);margin-top:4px;}
+.login-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-light),transparent);margin:20px 0;}
+.box{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow-card);width:min(430px,100%);}
+
+/* FORMS */
+label{display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:5px;letter-spacing:0.3px;}
+input,select,textarea{font-family:inherit;font-size:14px;border-radius:var(--radius-sm);border:1.5px solid var(--border);padding:10px 14px;background:var(--bg-base);color:var(--text-primary);width:100%;transition:border-color var(--transition),box-shadow var(--transition);outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-glow);}
+input::placeholder,textarea::placeholder{color:var(--text-muted)}
+select option{background:var(--bg-card);color:var(--text-primary)}
+
+/* BUTTONS */
+button{font-family:inherit;font-size:14px;font-weight:700;border-radius:var(--radius-sm);border:1.5px solid transparent;padding:10px 18px;cursor:pointer;transition:all var(--transition);letter-spacing:0.3px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;background:var(--blue);color:#fff;border-color:var(--blue);}
+button:hover{background:var(--blue-dark);border-color:var(--blue-dark);transform:translateY(-1px);box-shadow:0 4px 14px rgba(41,121,255,0.35);}
+button:active{transform:translateY(0);box-shadow:none}
+.ok{background:var(--green);border-color:var(--green);color:#fff}
+.ok:hover{background:var(--green-dark);border-color:var(--green-dark);box-shadow:0 4px 14px rgba(0,200,83,0.35)}
+.danger{background:var(--red);border-color:var(--red);color:#fff}
+.danger:hover{background:var(--red-dark);border-color:var(--red-dark);box-shadow:0 4px 14px rgba(255,61,87,0.35)}
+.gray{background:var(--bg-elevated);border-color:var(--border-light);color:var(--text-secondary)}
+.gray:hover{background:var(--border-light);border-color:var(--border);color:var(--text-primary);box-shadow:none}
+.btn-lg{padding:13px 24px;font-size:16px;border-radius:var(--radius);width:100%}
+.btn-warn{background:var(--yellow-dim);border-color:rgba(255,214,0,0.3);color:var(--yellow)}
+.btn-warn:hover{background:var(--yellow);color:#000;box-shadow:0 4px 14px rgba(255,214,0,0.3)}
+
+/* TOP BAR */
+.top{position:sticky;top:0;background:rgba(6,11,20,0.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;z-index:50;gap:12px;}
+.top-brand{display:flex;align-items:center;gap:10px}
+.top-brand-icon{font-size:26px;filter:drop-shadow(0 0 10px rgba(41,121,255,0.5))}
+.top-brand-name{font-size:18px;font-weight:800;color:var(--text-primary);letter-spacing:0.3px}
+.top-meta{font-size:12px;color:var(--text-muted);margin-top:2px}
+.top-meta span{color:var(--text-secondary)}
+.top-actions{display:flex;gap:8px;align-items:center}
+
+/* TABS */
+.tabs{display:flex;gap:4px;overflow-x:auto;padding:10px 16px;background:var(--bg-surface);border-bottom:1px solid var(--border);scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none}
+.tab{white-space:nowrap;background:transparent;border:1.5px solid transparent;color:var(--text-muted);font-size:13px;font-weight:600;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);letter-spacing:0.3px;}
+.tab:hover{background:var(--bg-elevated);color:var(--text-primary);transform:none;box-shadow:none;}
+.tab.active{background:var(--blue-dim);border-color:var(--blue);color:#fff;box-shadow:0 0 12px var(--blue-glow);}
+.tab.active:hover{background:var(--blue-dim);box-shadow:0 0 12px var(--blue-glow)}
+
+/* CONTENT */
+.content{padding:20px;max-width:1340px;margin:0 auto;}
+
+/* CARD */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-card);transition:border-color var(--transition);}
+
+/* DEVICE CARDS */
+.device-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-card);transition:all 0.25s ease;position:relative;overflow:hidden;}
+.device-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--border);transition:background 0.25s ease;}
+.device-card.available{border-color:rgba(0,200,83,0.25)}
+.device-card.available::before{background:linear-gradient(90deg,var(--green),var(--green-dark))}
+.device-card.busy{border-color:rgba(255,152,0,0.3);background:linear-gradient(160deg,var(--bg-card) 60%,rgba(255,152,0,0.04))}
+.device-card.busy::before{background:linear-gradient(90deg,var(--orange),#ff6d00)}
+.device-card.maintenance{border-color:rgba(255,61,87,0.2)}
+.device-card.maintenance::before{background:var(--red)}
+
+/* ALERT STATES */
+.device-card.warn-10{border-color:rgba(255,214,0,0.5)!important;background:linear-gradient(160deg,var(--bg-card) 60%,rgba(255,214,0,0.04))!important}
+.device-card.warn-10::before{background:linear-gradient(90deg,var(--yellow),#ffab00)!important}
+.device-card.warn-5{border-color:rgba(255,61,87,0.6)!important;background:linear-gradient(160deg,var(--bg-card) 60%,rgba(255,61,87,0.07))!important}
+.device-card.warn-5::before{background:linear-gradient(90deg,var(--red),#ff6b7a)!important}
+.device-card.overtime{border-color:rgba(255,61,87,0.8)!important}
+.device-card.overtime::before{background:linear-gradient(90deg,var(--red),var(--red-dark))!important}
+
+/* Session timer colors */
+.session-timer{font-size:30px;font-weight:900;color:var(--orange);text-shadow:0 0 20px rgba(255,152,0,0.3);margin:6px 0;font-variant-numeric:tabular-nums;}
+.session-timer.warn-10-txt{color:var(--yellow);text-shadow:0 0 20px rgba(255,214,0,0.4);}
+.session-timer.warn-5-txt{color:var(--red);text-shadow:0 0 20px rgba(255,61,87,0.5);}
+.session-timer.overtime-txt{color:var(--red);animation:blinkRed 0.8s ease-in-out infinite;text-shadow:0 0 24px rgba(255,61,87,0.7);}
+@keyframes blinkRed{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* Match badge */
+.match-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);color:#a78bfa;margin-top:4px;}
+
+/* Progress bar for match sessions */
+.match-progress-wrap{background:var(--bg-base);border-radius:999px;height:6px;margin:8px 0 4px;overflow:hidden;border:1px solid var(--border);}
+.match-progress-bar{height:100%;border-radius:999px;transition:width 1s linear,background 0.5s;}
+.match-progress-bar.ok-bar{background:linear-gradient(90deg,var(--green),#69f0ae);}
+.match-progress-bar.warn10-bar{background:linear-gradient(90deg,var(--yellow),#ffcc02);}
+.match-progress-bar.warn5-bar{background:linear-gradient(90deg,var(--red),#ff6b7a);}
+.match-progress-bar.over-bar{background:var(--red);animation:blinkRed 0.8s ease-in-out infinite;}
+
+.device-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px}
+.device-name{font-size:17px;font-weight:800;color:var(--text-primary)}
+.device-rate{font-size:11px;color:var(--text-muted);margin-top:2px}
+.device-divider{height:1px;background:var(--border);margin:12px 0}
+.session-info{font-size:13px;color:var(--text-secondary);line-height:1.8}
+.session-info strong{color:var(--text-primary)}
+.session-cost{font-size:12px;color:var(--text-muted);margin-bottom:8px}
+.session-total{font-size:22px;font-weight:900;color:var(--green);text-shadow:0 0 16px rgba(0,200,83,0.25);margin:4px 0 10px;}
+.device-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.device-actions button{flex:1;min-width:80px;padding:9px 12px;font-size:13px}
+.device-start-btn{width:100%;margin-top:10px;padding:11px;background:linear-gradient(135deg,var(--green-dim),rgba(0,200,83,0.12));border-color:rgba(0,200,83,0.3);color:var(--green);font-size:14px;}
+.device-start-btn:hover{background:var(--green);color:#fff;box-shadow:0 4px 18px rgba(0,200,83,0.35)}
+
+/* Alert notification toast */
+#alert-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;width:min(420px,calc(100vw - 32px));}
+.toast-item{background:var(--bg-elevated);border:1.5px solid var(--border-light);border-radius:var(--radius);padding:12px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.6);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;animation:toastIn 0.3s ease;pointer-events:auto;}
+.toast-item.t-warn{border-color:rgba(255,214,0,0.4);background:rgba(60,40,0,0.95);}
+.toast-item.t-danger{border-color:rgba(255,61,87,0.5);background:rgba(60,10,18,0.95);}
+.toast-item.t-end{border-color:rgba(255,152,0,0.5);background:rgba(50,25,0,0.95);}
+.toast-icon{font-size:20px;flex-shrink:0}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* Session type select buttons */
+.type-toggle{display:flex;gap:0;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--border);}
+.type-toggle button{border-radius:0;border:none;background:var(--bg-base);color:var(--text-muted);flex:1;padding:9px;font-size:13px;}
+.type-toggle button.sel{background:var(--blue-dim);color:#fff;border-bottom:2px solid var(--blue);}
+.type-toggle button:hover:not(.sel){background:var(--bg-elevated);transform:none;box-shadow:none;}
+
+/* KPI */
+.kpi{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;transition:border-color var(--transition),transform var(--transition);}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--purple));}
+.kpi:hover{border-color:var(--border-light);transform:translateY(-2px)}
+.kpi-label{font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+.kpi b{font-size:26px;font-weight:900;display:block;margin-top:6px;color:var(--text-primary);font-variant-numeric:tabular-nums;}
+.kpi-green::after{background:linear-gradient(90deg,var(--green),#00e676)}.kpi-green b{color:var(--green)}
+.kpi-red::after{background:linear-gradient(90deg,var(--red),#ff6b7a)}.kpi-red b{color:var(--red)}
+.kpi-orange::after{background:linear-gradient(90deg,var(--orange),#ffcc02)}.kpi-orange b{color:var(--orange)}
+
+/* LAYOUT */
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.col{display:flex;flex-direction:column;gap:8px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+.mb{margin-bottom:16px}.mt{margin-top:16px}
+
+/* TYPOGRAPHY */
+.big{font-size:20px;font-weight:800;color:var(--text-primary);letter-spacing:0.2px}
+.section-title{font-size:18px;font-weight:800;color:var(--text-primary)}
+.muted{color:var(--text-muted)}.small{font-size:12px}.price{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
+.b-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,200,83,0.2)}
+.b-busy{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(255,152,0,0.2)}
+.b-bad{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,61,87,0.15)}
+
+/* SYNC */
+.sync{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;background:var(--bg-elevated);border:1px solid var(--border);padding:4px 10px;border-radius:999px;letter-spacing:0.3px;}
+.sync::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--text-muted);display:inline-block}
+.sync.on{background:var(--green-dim);border-color:rgba(0,200,83,0.2);color:var(--green)}.sync.on::before{background:var(--green);box-shadow:0 0 6px var(--green)}
+.sync.warn{background:var(--orange-dim);border-color:rgba(255,152,0,0.2);color:var(--orange)}.sync.warn::before{background:var(--orange)}
+.sync.err{background:var(--red-dim);border-color:rgba(255,61,87,0.15);color:var(--red)}.sync.err::before{background:var(--red)}
+
+/* TABLES */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-surface);}
+table{width:100%;border-collapse:collapse;min-width:600px;}
+th{background:var(--bg-base);padding:12px 16px;text-align:right;font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:0.6px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{border-bottom:1px solid rgba(30,48,80,0.5);padding:12px 16px;text-align:right;font-size:14px;color:var(--text-secondary);transition:background var(--transition);}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(41,121,255,0.04);color:var(--text-primary)}
+td button{padding:6px 12px;font-size:12px}
+
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:999;animation:fadeIn 0.15s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal .box{max-height:90vh;overflow-y:auto;width:min(720px,100%);background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:28px;box-shadow:0 32px 80px rgba(0,0,0,0.8),0 0 0 1px rgba(41,121,255,0.08);animation:slideUp 0.2s ease;}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal .big{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.modal .grid{margin-bottom:16px}
+
+/* PAGE HEADERS */
+.page-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
+.page-subtitle{font-size:13px;color:var(--text-muted);margin-top:3px}
+
+/* DASH */
+.dash-header{background:linear-gradient(135deg,var(--bg-card) 0%,rgba(41,121,255,0.05) 100%);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.dash-header-title{font-size:22px;font-weight:900;color:var(--text-primary)}
+.dash-header-sub{font-size:13px;color:var(--text-muted);margin-top:3px}
+
+/* SETTINGS */
+.settings-section{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
+.settings-note{background:rgba(41,121,255,0.06);border:1px solid rgba(41,121,255,0.15);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--text-secondary);margin-bottom:14px;line-height:1.7;}
+
+/* INVOICE */
+.invoice-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--border);font-size:14px;color:var(--text-secondary);}
+.invoice-row:last-of-type{border-bottom:none}
+.invoice-total-row{display:flex;justify-content:space-between;padding:10px 0 0;margin-top:6px;border-top:2px solid var(--border-light);font-size:20px;font-weight:900;color:var(--green);}
+
+/* Match pricing table in modal */
+.match-price-table{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-top:10px;}
+.match-price-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;cursor:pointer;transition:background var(--transition);}
+.match-price-row:last-child{border-bottom:none}
+.match-price-row:hover{background:var(--bg-elevated)}
+.match-price-row.sel{background:var(--blue-dim);border-right:3px solid var(--blue);}
+.match-price-row input[type=radio]{accent-color:var(--blue);width:16px;height:16px;flex-shrink:0;}
+.match-price-label{flex:1;font-weight:700;font-size:14px}
+.match-price-mins{font-size:12px;color:var(--text-muted);white-space:nowrap;}
+.match-price-val{font-size:15px;font-weight:800;color:var(--blue);white-space:nowrap;}
+
+/* PRINT */
+@media print{
+  .top,.tabs,button,.no-print,#sl,.top-actions,#alert-toast{display:none!important}
+  body{background:white;color:black;font-family:Arial,sans-serif}
+  .card,.box,.device-card,.kpi,.settings-section{box-shadow:none;background:white;color:black;border:1px solid #ccc;}
+  .modal{position:static;background:transparent;backdrop-filter:none}
+  .modal .box{box-shadow:none;border:1px solid #ccc;background:white;color:black}
+  .big,.section-title,.dash-header-title,.device-name{color:black}
+  .muted,.small,.kpi-label,.session-info,.device-rate,.top-meta{color:#555}
+  .session-timer,.session-total,.kpi b,.invoice-total-row{color:black}
+  table th,table td{color:black;border-color:#ccc}
+  .badge{border:1px solid #ccc;background:#eee;color:#333}
+  .tw{border-color:#ccc}
+}
+
+/* RESPONSIVE */
+@media(max-width:850px){
+  .g2,.g3,.g5{grid-template-columns:1fr}
+  .top{flex-direction:column;align-items:stretch;gap:10px;padding:12px}
+  .top-brand,.top-actions{justify-content:space-between}
+  .top-actions{flex-wrap:wrap}
+  .top-actions button{flex:1}
+  .content{padding:12px}
+  .device-card{padding:14px}
+  .session-timer{font-size:26px}
+  .session-total{font-size:18px}
+  .kpi b{font-size:22px}
+  .dash-header{padding:16px}
+  .dash-header-title{font-size:18px}
+  .modal .box{padding:18px}
+  table{min-width:520px}
+  .device-actions button{font-size:12px;padding:8px 10px}
+}
+@media(max-width:480px){
+  .tabs{padding:8px}.tab{padding:7px 12px;font-size:12px}
+  .big,.section-title{font-size:17px}.dash-header-title{font-size:16px}
+  button{font-size:13px;padding:9px 14px}
+  .login-box{padding:28px 20px}.login-icon{font-size:44px}.login-title{font-size:19px}
+  .row{gap:8px}
+}
+
+/* Pulse animations */
+@keyframes pulseBorder{0%,100%{box-shadow:0 4px 24px rgba(0,0,0,0.5),0 0 0 0 rgba(255,152,0,0)}50%{box-shadow:0 4px 24px rgba(0,0,0,0.5),0 0 0 4px rgba(255,152,0,0.06)}}
+.device-card.busy:not(.warn-5):not(.overtime){animation:pulseBorder 3s ease-in-out infinite}
+@keyframes pulseWarn{0%,100%{box-shadow:0 4px 24px rgba(0,0,0,0.5),0 0 0 0 rgba(255,214,0,0)}50%{box-shadow:0 4px 24px rgba(0,0,0,0.5),0 0 0 6px rgba(255,214,0,0.1)}}
+.device-card.warn-10{animation:pulseWarn 1.5s ease-in-out infinite}
+@keyframes pulseDanger{0%,100%{box-shadow:0 4px 24px rgba(0,0,0,0.5),0 0 0 0 rgba(255,61,87,0)}50%{box-shadow:0 4px 24px rgba(0,0,0,0.5),0 0 0 8px rgba(255,61,87,0.15)}}
+.device-card.warn-5,.device-card.overtime{animation:pulseDanger 0.8s ease-in-out infinite}
+[dir=rtl] th,[dir=rtl] td{text-align:right}
+</style>
+</head>
+<body>
+
+<div id="login" class="login">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="login-icon">🎮</span>
+      <div class="login-title">PS Cafe Manager</div>
+      <div class="login-sub">Hybrid Offline Queue + Auto Sync • V6</div>
+    </div>
+    <div class="login-divider"></div>
+    <div class="col">
+      <div><label>اسم المستخدم</label><input id="lu" value="admin" autocomplete="username"></div>
+      <div><label>كلمة المرور</label><input id="lp" type="password" value="1234" autocomplete="current-password"></div>
+      <button class="btn-lg ok" onclick="login()" style="margin-top:4px">🔑 دخول</button>
+      <div id="lm" class="small" style="color:#ff8a9a;text-align:center;min-height:18px"></div>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="top">
+    <div class="top-brand">
+      <span class="top-brand-icon">🎮</span>
+      <div>
+        <div class="top-brand-name">PS Cafe Manager</div>
+        <div class="top-meta small">المستخدم: <span id="cu"></span>&nbsp;|&nbsp;<span id="cr"></span>&nbsp;|&nbsp;<span id="sl" class="sync">Offline</span></div>
+      </div>
+    </div>
+    <div class="top-actions no-print">
+      <button class="gray" onclick="manualSync()">🔄 مزامنة</button>
+      <button class="danger" onclick="logout()">خروج</button>
+    </div>
+  </div>
+  <div id="tabs" class="tabs no-print"></div>
+  <div class="content">
+    <section id="vDashboard"></section>
+    <section id="vProducts" class="hidden"></section>
+    <section id="vDevices" class="hidden"></section>
+    <section id="vInvoices" class="hidden"></section>
+    <section id="vExpenses" class="hidden"></section>
+    <section id="vReports" class="hidden"></section>
+    <section id="vUsers" class="hidden"></section>
+    <section id="vSettings" class="hidden"></section>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden"><div id="mc" class="box"></div></div>
+<div id="alert-toast"></div>
+
+<script>
+// ============================================================
+// CORE STATE & STORAGE
+// ============================================================
+const K='ps_cafe_v4_state', SK='ps_cafe_v4_settings', QK='ps_cafe_v4_sync_queue';
+let state,user=null,tab='Dashboard',dirty=false,timer=null;
+
+function id(){return 'id_'+Math.random().toString(36).slice(2)+Date.now().toString(36)}
+
+// DEFAULT match pricing configs per device: {mins, single, multi}
+const DEF_MATCH_PRICES=[
+  {mins:15,single:15,multi:25},
+  {mins:30,single:25,multi:40},
+  {mins:45,single:35,multi:55},
+  {mins:60,single:45,multi:70}
+];
+
+function def(){
+  return{
+    users:[
+      {id:id(),username:'admin',password:'1234',role:'Admin',active:true},
+      {id:id(),username:'cashier',password:'1234',role:'Cashier',active:true}
+    ],
+    devices:[1,2,3,4,5].map(n=>({
+      id:'ps'+n,name:'PS '+n,status:'available',singleRate:60,multiRate:90,
+      matchPrices:DEF_MATCH_PRICES.map(x=>({...x}))
+    })),
+    products:['شاي:15','قهوة:25','نسكافيه:30','مياه:10','عصير:20','كانز:25'].map(x=>{
+      let a=x.split(':');return{id:id(),name:a[0],price:+a[1],stock:0,active:true}
+    }),
+    sessions:[],invoices:[],expenses:[],nextInvoice:1,updatedAt:new Date().toISOString()
+  }
+}
+
+function load(){try{state=JSON.parse(localStorage.getItem(K))||def()}catch(e){state=def()}
+  // Migrate old devices without matchPrices
+  state.devices.forEach(d=>{if(!d.matchPrices)d.matchPrices=DEF_MATCH_PRICES.map(x=>({...x}))});
+  save(false)
+}
+function save(md=true){state.updatedAt=new Date().toISOString();localStorage.setItem(K,JSON.stringify(state));if(md){dirty=true;markPending('تغيير محلي');sched()}render()}
+function st(){try{return JSON.parse(localStorage.getItem(SK))||{mode:'offline',url:'',key:''}}catch(e){return{mode:'offline',url:'',key:''}}}
+function setst(s){localStorage.setItem(SK,JSON.stringify(s));setup();render()}
+function money(n){return (Number(n)||0).toFixed(2)}
+function fmt(d){return d?new Date(d).toLocaleString('ar-EG'):''}
+function today(){return new Date().toISOString().slice(0,10)}
+function val(x){return document.getElementById(x)?.value||''}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function admin(){return user&&user.role==='Admin'}
+
+// ============================================================
+// AUTH
+// ============================================================
+function login(){
+  let u=val('lu').trim().toLowerCase(),p=val('lp');
+  let x=state.users.find(a=>a.username.toLowerCase()==u&&a.password==p&&a.active);
+  if(!x){lm.textContent='بيانات الدخول غير صحيحة';return}
+  user=x;
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  tab='Dashboard';tabs();setup();
+  reqNotifPerm();
+  render();
+}
+function logout(){user=null;document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden')}
+
+// ============================================================
+// TABS & RENDER
+// ============================================================
+function tabs(){
+  let all=[['Dashboard','🏠 الرئيسية'],['Products','🥤 المشروبات'],['Devices','🎮 الأجهزة'],['Invoices','🧾 الفواتير'],['Expenses','💸 المصروفات'],['Reports','📊 التقارير'],['Users','👥 المستخدمين'],['Settings','⚙️ الإعدادات']];
+  let v=all.filter(t=>admin()||!['Devices','Expenses','Reports','Users','Settings'].includes(t[0]));
+  document.getElementById('tabs').innerHTML=v.map(t=>`<button class="tab ${tab==t[0]?'active':''}" onclick="show('${t[0]}')">${t[1]}</button>`).join('')
+}
+function show(t){tab=t;tabs();render()}
+function render(){
+  if(!user)return;
+  cu.textContent=user.username;cr.textContent=user.role;
+  let ss=st();let q=queue().length,online=navigator.onLine;
+  sl.textContent=ss.mode==='supabase'?(online?(q?'Online — Pending '+q:'Online ✓'):'Offline — Pending '+q):'Offline Local';
+  sl.className='sync '+(ss.mode==='supabase'?(online?(q?'warn':'on'):'err'):'');
+  ['Dashboard','Products','Devices','Invoices','Expenses','Reports','Users','Settings'].forEach(x=>document.getElementById('v'+x).classList.add('hidden'));
+  document.getElementById('v'+tab).classList.remove('hidden');
+  rDash();rProducts();rDevices();rInvoices();rExpenses();rReports();rUsers();rSettings();
+}
+
+// 1-second tick
+setInterval(()=>{if(user&&tab==='Dashboard'){rDash();checkAlerts();}},1000)
+
+// ============================================================
+// SESSION HELPERS
+// ============================================================
+function sess(did){return state.sessions.find(s=>s.deviceId===did&&s.status==='open')}
+function cost(s){
+  let elapsed=Math.max(0,(Date.now()-new Date(s.start))/60000); // float minutes elapsed
+  let d=state.devices.find(x=>x.id===s.deviceId)||{};
+  let play=0,m=Math.ceil(elapsed)||1;
+  if(s.sessionType==='match'){
+    // Fixed price match
+    play=+s.matchPrice||0;
+  } else {
+    // Open session: billed by hour rate
+    let rate=s.mode==='multi'?d.multiRate:d.singleRate;
+    play=elapsed/60*(+rate||0);
+  }
+  let dr=(s.items||[]).reduce((a,i)=>a+i.price*i.qty,0);
+  return{m,elapsed,play,dr,total:play+dr}
+}
+
+function badge(d){
+  let c=d.status==='available'?'b-ok':d.status==='busy'?'b-busy':'b-bad';
+  let t=d.status==='available'?'✔ متاح':d.status==='busy'?'● مشغول':'✕ صيانة';
+  return `<span class="badge ${c}">${t}</span>`
+}
+
+// ============================================================
+// ALERT / NOTIFICATION SYSTEM
+// ============================================================
+const alertedSessions={};// track which alerts have fired: {sid: {w10,w5,end,over}}
+
+function reqNotifPerm(){
+  if('Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+}
+
+function fireAlert(sid,level,deviceName,minsLeft){
+  if(!alertedSessions[sid])alertedSessions[sid]={};
+  if(alertedSessions[sid][level])return; // already fired
+  alertedSessions[sid][level]=true;
+
+  let msg='',icon='⚠️',cls='t-warn';
+  if(level==='w10'){msg=`${deviceName}: باقي 10 دقائق`;icon='⏰';cls='t-warn'}
+  else if(level==='w5'){msg=`${deviceName}: باقي 5 دقائق فقط!`;icon='🔴';cls='t-danger'}
+  else if(level==='end'){msg=`${deviceName}: الوقت انتهى!`;icon='🏁';cls='t-end'}
+  else if(level==='over'){msg=`${deviceName}: تجاوز الوقت بـ 5 دقائق!`;icon='🚨';cls='t-danger'}
+
+  // Sound (Web Audio API)
+  playBeep(level);
+  // Vibration
+  if(navigator.vibrate){
+    if(level==='w10') navigator.vibrate([200,100,200]);
+    else if(level==='w5') navigator.vibrate([300,100,300,100,300]);
+    else if(level==='end'||level==='over') navigator.vibrate([500,150,500,150,500,150,500]);
+  }
+  // Browser Notification
+  if('Notification' in window && Notification.permission==='granted'){
+    new Notification('PS Cafe Manager — '+deviceName,{body:msg.replace(deviceName+': ',''),icon:'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>'});
+  }
+  // Toast
+  showToast(icon,msg,cls);
+}
+
+function playBeep(level){
+  try{
+    let ctx=new(window.AudioContext||window.webkitAudioContext)();
+    let freqs={w10:[520,520],w5:[660,520,660],end:[800,600,400],over:[400,300,200,300,400]};
+    let seq=freqs[level]||[520];
+    let t=ctx.currentTime;
+    seq.forEach((f,i)=>{
+      let o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=f;o.type='sine';
+      g.gain.setValueAtTime(0.3,t+i*0.18);
+      g.gain.exponentialRampToValueAtTime(0.001,t+i*0.18+0.15);
+      o.start(t+i*0.18);o.stop(t+i*0.18+0.15);
+    });
+    setTimeout(()=>ctx.close(),2000);
+  }catch(e){}
+}
+
+function showToast(icon,msg,cls){
+  let wrap=document.getElementById('alert-toast');
+  let el=document.createElement('div');
+  el.className='toast-item '+cls;
+  el.innerHTML=`<span class="toast-icon">${icon}</span><span>${msg}</span>`;
+  wrap.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity 0.4s';setTimeout(()=>el.remove(),400)},5000);
+}
+
+function checkAlerts(){
+  state.sessions.filter(s=>s.status==='open').forEach(s=>{
+    if(s.sessionType!=='match')return; // only for timed matches
+    let d=state.devices.find(x=>x.id===s.deviceId);
+    if(!d)return;
+    let elapsed=(Date.now()-new Date(s.start))/60000;
+    let total=s.matchMins||0;
+    let remaining=total-elapsed;
+    let dname=d.name;
+
+    if(remaining<=10 && remaining>5) fireAlert(s.id,'w10',dname,Math.ceil(remaining));
+    if(remaining<=5 && remaining>0) fireAlert(s.id,'w5',dname,Math.ceil(remaining));
+    if(remaining<=0 && elapsed<=total+1) fireAlert(s.id,'end',dname,0);
+    if(elapsed>=total+5) fireAlert(s.id,'over',dname,Math.floor(elapsed-total));
+  });
+}
+
+// ============================================================
+// DASHBOARD RENDER
+// ============================================================
+function getDeviceAlertClass(s){
+  if(!s||s.sessionType!=='match')return '';
+  let elapsed=(Date.now()-new Date(s.start))/60000;
+  let total=s.matchMins||0;
+  let remaining=total-elapsed;
+  if(elapsed>=total)return 'overtime';
+  if(remaining<=5)return 'warn-5';
+  if(remaining<=10)return 'warn-10';
+  return '';
+}
+
+function getTimerClass(s){
+  if(!s||s.sessionType!=='match')return '';
+  let elapsed=(Date.now()-new Date(s.start))/60000;
+  let total=s.matchMins||0;
+  let remaining=total-elapsed;
+  if(elapsed>=total)return 'overtime-txt';
+  if(remaining<=5)return 'warn-5-txt';
+  if(remaining<=10)return 'warn-10-txt';
+  return '';
+}
+
+function matchProgressBar(s){
+  if(!s||s.sessionType!=='match')return '';
+  let elapsed=(Date.now()-new Date(s.start))/60000;
+  let total=s.matchMins||1;
+  let pct=Math.min(100,elapsed/total*100);
+  let barCls=pct<75?'ok-bar':pct<91?'warn10-bar':pct<101?'warn5-bar':'over-bar';
+  return `<div class="match-progress-wrap"><div class="match-progress-bar ${barCls}" style="width:${Math.min(100,pct)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">
+      <span>${Math.floor(elapsed)} / ${total} د</span>
+      <span>${elapsed>total?'تجاوز الوقت':'باقي '+Math.max(0,Math.ceil(total-elapsed))+' د'}</span>
+    </div>`;
+}
+
+function rDash(){
+  vDashboard.innerHTML=`
+    <div class="dash-header">
+      <div>
+        <div class="dash-header-title">🎮 لوحة التشغيل</div>
+        <div class="dash-header-sub muted">تشغيل وإيقاف الأجهزة وإدارة الجلسات</div>
+      </div>
+      <div class="row">
+        <button class="ok" onclick="startModal()">▶ جلسة مفتوحة</button>
+        <button style="background:var(--purple-dim);border-color:rgba(124,58,237,0.4);color:#a78bfa" onclick="matchModal()">⚽ مباراة محددة</button>
+      </div>
+    </div>
+    <div class="grid g5">${state.devices.map(d=>{
+      let s=sess(d.id),c=s?cost(s):null;
+      let stBase=d.status==='available'?'available':d.status==='busy'?'busy':'maintenance';
+      let alertCls=s?getDeviceAlertClass(s):'';
+      let timerCls=s?getTimerClass(s):'';
+      let cardCls=alertCls?alertCls:stBase;
+      return `<div class="device-card ${stBase} ${alertCls}" id="dc_${d.id}">
+        <div class="device-card-header">
+          <div>
+            <div class="device-name">${d.name}</div>
+            <div class="device-rate small muted">Single ${money(d.singleRate)} | Multi ${money(d.multiRate)} ج/س</div>
+          </div>
+          ${badge(d)}
+        </div>
+        ${s?`
+          <div class="device-divider"></div>
+          ${s.sessionType==='match'?`<span class="match-badge">⚽ مباراة ${s.matchMins} دقيقة</span>`:''}
+          <div class="session-info">
+            <div>العميل: <strong>${s.customer||'—'}</strong></div>
+            <div>النظام: <strong>${s.mode==='multi'?'Multi Player':'Single Player'}</strong></div>
+            <div>البداية: <strong>${fmt(s.start)}</strong></div>
+          </div>
+          ${s.sessionType==='match'?matchProgressBar(s):''}
+          <div class="session-timer ${timerCls}">${
+            s.sessionType==='match'?
+            (()=>{let rem=s.matchMins-(Date.now()-new Date(s.start))/60000;return rem>0?Math.ceil(rem)+' <span style="font-size:13px;font-weight:600;color:var(--text-muted)">د متبقية</span>':'<span style="font-size:14px">+'+Math.floor((Date.now()-new Date(s.start))/60000-s.matchMins)+'د تجاوز</span>'})()
+            :c.m+' <span style="font-size:14px;font-weight:600;color:var(--text-muted)">دقيقة</span>'
+          }</div>
+          <div class="session-cost small muted">لعب: ${money(c.play)} ج &nbsp;|&nbsp; مشروبات: ${money(c.dr)} ج</div>
+          <div class="session-total">الإجمالي: ${money(c.total)} ج</div>
+          <div class="device-actions">
+            <button onclick="drinkModal('${s.id}')">🥤 مشروبات</button>
+            <button class="danger" onclick="endSession('${s.id}')">⏹ إنهاء</button>
+          </div>
+        `:d.status==='available'?`
+          <div class="device-divider"></div>
+          <p class="muted small" style="text-align:center;padding:8px 0">الجهاز جاهز للتشغيل</p>
+          <div class="device-actions" style="flex-direction:column">
+            <button class="device-start-btn" onclick="startModal('${d.id}')">▶ جلسة مفتوحة</button>
+            <button style="width:100%;margin-top:6px;background:var(--purple-dim);border-color:rgba(124,58,237,0.4);color:#a78bfa;padding:10px" onclick="matchModal('${d.id}')">⚽ مباراة</button>
+          </div>
+        `:`
+          <div class="device-divider"></div>
+          <p class="muted small" style="text-align:center;padding:8px 0">🔧 تحت الصيانة</p>
+        `}
+      </div>`
+    }).join('')}</div>`;
+}
+
+// ============================================================
+// OPEN SESSION MODAL
+// ============================================================
+function startModal(did=''){
+  let av=state.devices.filter(d=>d.status==='available'&&!sess(d.id));
+  modal(`<div class="big">▶ جلسة مفتوحة جديدة</div>
+    <div class="grid g2">
+      <div class="col"><label>الجهاز</label><select id="sd">${av.map(d=>`<option value="${d.id}" ${d.id==did?'selected':''}>${d.name}</option>`)}</select></div>
+      <div class="col"><label>اسم العميل</label><input id="sc" placeholder="اختياري"></div>
+      <div class="col" style="grid-column:1/-1"><label>نوع التشغيل</label>
+        <div class="type-toggle">
+          <button type="button" class="sel" id="tm_single" onclick="toggleMode('single')">Single Player</button>
+          <button type="button" id="tm_multi" onclick="toggleMode('multi')">Multi Player</button>
+        </div>
+        <input type="hidden" id="sm" value="single">
+      </div>
+    </div>
+    <br><div class="row">
+      <button class="ok" onclick="start()">▶ بدء الجلسة</button>
+      <button class="gray" onclick="closeM()">إلغاء</button>
+    </div>`);
+}
+function toggleMode(m){
+  document.getElementById('sm').value=m;
+  document.getElementById('tm_single').className=m==='single'?'sel':'';
+  document.getElementById('tm_multi').className=m==='multi'?'sel':'';
+}
+function start(){
+  let did=val('sd');if(!did)return alert('اختار جهاز');
+  state.sessions.push({id:id(),deviceId:did,customer:val('sc'),mode:val('sm'),sessionType:'open',items:[],start:new Date().toISOString(),status:'open',user:user.username});
+  state.devices.find(d=>d.id==did).status='busy';
+  closeM();save();
+}
+
+// ============================================================
+// MATCH MODAL
+// ============================================================
+function matchModal(did=''){
+  let av=state.devices.filter(d=>d.status==='available'&&!sess(d.id));
+  if(!av.length&&!did){return alert('لا توجد أجهزة متاحة');}
+  // Build device selector
+  let devSel=`<select id="msd" onchange="updateMatchPrices()">${av.map(d=>`<option value="${d.id}" ${d.id==did?'selected':''}>${d.name}</option>`)}</select>`;
+  modal(`<div class="big">⚽ بدء مباراة محددة الوقت</div>
+    <div class="grid g2">
+      <div class="col"><label>الجهاز</label>${devSel}</div>
+      <div class="col"><label>اسم العميل</label><input id="msc" placeholder="اختياري"></div>
+      <div class="col" style="grid-column:1/-1"><label>نوع التشغيل</label>
+        <div class="type-toggle">
+          <button type="button" class="sel" id="mm_single" onclick="toggleMatchMode('single')">Single Player</button>
+          <button type="button" id="mm_multi" onclick="toggleMatchMode('multi')">Multi Player</button>
+        </div>
+        <input type="hidden" id="msm" value="single">
+      </div>
+      <div class="col" style="grid-column:1/-1">
+        <label>اختر مدة المباراة والسعر</label>
+        <div id="match-prices-list"></div>
+        <input type="hidden" id="sel-match-mins" value="">
+        <input type="hidden" id="sel-match-price" value="">
+      </div>
+    </div>
+    <br><div class="row">
+      <button class="ok" onclick="startMatch()">⚽ بدء المباراة</button>
+      <button class="gray" onclick="closeM()">إلغاء</button>
+    </div>`);
+  updateMatchPrices();
+}
+function toggleMatchMode(m){
+  document.getElementById('msm').value=m;
+  document.getElementById('mm_single').className=m==='single'?'sel':'';
+  document.getElementById('mm_multi').className=m==='multi'?'sel':'';
+  updateMatchPrices();
+}
+function updateMatchPrices(){
+  let did=val('msd');
+  let d=state.devices.find(x=>x.id===did);
+  if(!d)return;
+  let mode=document.getElementById('msm')?.value||'single';
+  let prices=d.matchPrices||DEF_MATCH_PRICES;
+  let html=`<div class="match-price-table">`;
+  prices.forEach((p,i)=>{
+    let price=mode==='multi'?p.multi:p.single;
+    html+=`<div class="match-price-row ${i===0?'sel':''}" id="mpr_${i}" onclick="selectMatchPrice(${i},${p.mins},${price})">
+      <input type="radio" name="matchopt" ${i===0?'checked':''} id="mr_${i}">
+      <span class="match-price-label">${p.mins} دقيقة</span>
+      <span class="match-price-mins">${p.mins/15} ربع</span>
+      <span class="match-price-val">${money(price)} ج</span>
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('match-prices-list').innerHTML=html;
+  // auto select first
+  if(prices.length){
+    let p=prices[0];
+    let price=mode==='multi'?p.multi:p.single;
+    document.getElementById('sel-match-mins').value=p.mins;
+    document.getElementById('sel-match-price').value=price;
+  }
+}
+function selectMatchPrice(idx,mins,price){
+  document.querySelectorAll('.match-price-row').forEach((el,i)=>{el.className='match-price-row'+(i===idx?' sel':'')});
+  document.getElementById('sel-match-mins').value=mins;
+  document.getElementById('sel-match-price').value=price;
+}
+function startMatch(){
+  let did=val('msd');if(!did)return alert('اختار جهاز');
+  let mins=+val('sel-match-mins');
+  let price=+val('sel-match-price');
+  if(!mins||!price)return alert('اختار مدة المباراة');
+  let sid=id();
+  state.sessions.push({id:sid,deviceId:did,customer:val('msc'),mode:document.getElementById('msm').value,sessionType:'match',matchMins:mins,matchPrice:price,items:[],start:new Date().toISOString(),status:'open',user:user.username});
+  state.devices.find(d=>d.id==did).status='busy';
+  closeM();save();
+}
+
+// ============================================================
+// DRINKS
+// ============================================================
+function drinkModal(sid){
+  let s=state.sessions.find(x=>x.id==sid);
+  modal(`<div class="big">🥤 مشروبات الجلسة</div>
+    <div class="grid g2" style="align-items:end">
+      <div class="col"><label>الصنف</label><select id="dp">${state.products.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name} — ${money(p.price)} ج</option>`)}</select></div>
+      <div class="col"><label>الكمية</label><input id="dq" type="number" value="1" min="1"></div>
+    </div>
+    <div style="margin-top:10px"><button class="ok" onclick="addDrink('${sid}')">➕ إضافة</button></div>
+    <br>
+    <div class="tw"><table><tr><th>الصنف</th><th>كمية</th><th>سعر</th><th>إجمالي</th><th></th></tr>
+    ${(s.items||[]).map((i,n)=>`<tr><td>${i.name}</td><td>${i.qty}</td><td>${money(i.price)}</td><td>${money(i.price*i.qty)}</td><td><button class="danger" onclick="remDrink('${sid}',${n})">حذف</button></td></tr>`).join('')}
+    </table></div>
+    <br><button class="gray" onclick="closeM()">إغلاق</button>`);
+}
+function addDrink(sid){let s=state.sessions.find(x=>x.id==sid),p=state.products.find(x=>x.id==val('dp')),q=+val('dq')||1;s.items.push({productId:p.id,name:p.name,price:+p.price,qty:q});save();drinkModal(sid)}
+function remDrink(sid,n){let s=state.sessions.find(x=>x.id==sid);s.items.splice(n,1);save();drinkModal(sid)}
+
+// ============================================================
+// END SESSION & INVOICE
+// ============================================================
+function endSession(sid){
+  let s=state.sessions.find(x=>x.id==sid),d=state.devices.find(x=>x.id==s.deviceId),c=cost(s);
+  let inv={id:id(),no:state.nextInvoice++,date:new Date().toISOString(),deviceId:d.id,deviceName:d.name,customer:s.customer,mode:s.mode,sessionType:s.sessionType||'open',matchMins:s.matchMins||null,start:s.start,end:new Date().toISOString(),minutes:c.m,playTotal:+c.play.toFixed(2),drinkTotal:+c.dr.toFixed(2),total:+c.total.toFixed(2),items:s.items,payment:'Cash',user:user.username};
+  s.status='closed';s.end=inv.end;d.status='available';
+  state.invoices.push(inv);
+  // clear alert tracking
+  delete alertedSessions[sid];
+  save();showInv(inv.id);
+}
+function showInv(iid){
+  let i=state.invoices.find(x=>x.id==iid);
+  modal(`<div class="big">🧾 فاتورة رقم ${i.no}</div>
+    <div class="invoice-row"><span>التاريخ</span><span>${fmt(i.date)}</span></div>
+    <div class="invoice-row"><span>الجهاز</span><span>${i.deviceName} — ${i.mode}</span></div>
+    ${i.sessionType==='match'?`<div class="invoice-row"><span>نوع الجلسة</span><span>⚽ مباراة ${i.matchMins} دقيقة</span></div>`:''}
+    <div class="invoice-row"><span>العميل</span><span>${i.customer||'—'}</span></div>
+    <div class="invoice-row"><span>المدة الفعلية</span><span>${i.minutes} دقيقة</span></div>
+    <div class="invoice-row"><span>رسوم اللعب</span><span>${money(i.playTotal)} ج</span></div>
+    <div class="invoice-row"><span>رسوم المشروبات</span><span>${money(i.drinkTotal)} ج</span></div>
+    <div class="invoice-total-row"><span>الإجمالي</span><span>${money(i.total)} ج</span></div>
+    <br><div class="row"><button onclick="window.print()">🖨 طباعة</button><button class="gray" onclick="closeM()">إغلاق</button></div>`);
+}
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+function rProducts(){vProducts.innerHTML=`
+  <div class="page-header">
+    <div class="page-header-left"><div class="section-title">🥤 المشروبات والمنتجات</div><div class="page-subtitle muted">إدارة قائمة المشروبات والأسعار</div></div>
+    <button class="ok" onclick="prodModal()">➕ إضافة منتج</button>
+  </div>
+  <div class="tw"><table><tr><th>الاسم</th><th>السعر</th><th>المخزون</th><th>الحالة</th><th></th></tr>
+  ${state.products.map(p=>`<tr><td><strong>${p.name}</strong></td><td>${money(p.price)} ج</td><td>${p.stock}</td><td>${p.active?'<span class="badge b-ok">فعال</span>':'<span class="badge b-bad">غير فعال</span>'}</td><td><button onclick="prodModal('${p.id}')">✏ تعديل</button></td></tr>`).join('')}
+  </table></div>`
+}
+function prodModal(pid=''){let p=state.products.find(x=>x.id==pid)||{name:'',price:0,stock:0,active:true};
+  modal(`<div class="big">${pid?'✏ تعديل منتج':'➕ إضافة منتج'}</div>
+    <div class="grid g2">
+      <div class="col"><label>الاسم</label><input id="pn" value="${esc(p.name)}" placeholder="اسم المنتج"></div>
+      <div class="col"><label>السعر (جنيه)</label><input id="pp" type="number" value="${p.price}" placeholder="0.00"></div>
+      <div class="col"><label>المخزون</label><input id="ps" type="number" value="${p.stock}" placeholder="0"></div>
+      <div class="col"><label>الحالة</label><select id="pa"><option value="true" ${p.active?'selected':''}>✔ فعال</option><option value="false" ${!p.active?'selected':''}>✕ غير فعال</option></select></div>
+    </div><br>
+    <div class="row"><button class="ok" onclick="saveProd('${pid}')">💾 حفظ</button><button class="gray" onclick="closeM()">إلغاء</button></div>`);
+}
+function saveProd(pid){let o={name:val('pn'),price:+val('pp'),stock:+val('ps'),active:val('pa')==='true'};if(pid)Object.assign(state.products.find(x=>x.id==pid),o);else state.products.push({id:id(),...o});closeM();save()}
+
+// ============================================================
+// DEVICES PAGE (with Add Device + Match Pricing editor)
+// ============================================================
+function rDevices(){vDevices.innerHTML=`
+  <div class="page-header">
+    <div class="page-header-left"><div class="section-title">🎮 الأجهزة والأسعار</div><div class="page-subtitle muted">إدارة أجهزة البلايستيشن والتسعيرة والمباريات</div></div>
+    <button class="ok" onclick="addDeviceModal()">➕ إضافة جهاز</button>
+  </div>
+  <div class="tw"><table><tr><th>الجهاز</th><th>الحالة</th><th>Single ج/س</th><th>Multi ج/س</th><th>تسعير المباريات</th><th>تغيير الحالة</th><th></th></tr>
+  ${state.devices.map(d=>`<tr>
+    <td><input id="dn${d.id}" value="${esc(d.name)}" style="width:100px"></td>
+    <td>${badge(d)}</td>
+    <td><input id="ds${d.id}" type="number" value="${d.singleRate}" style="width:80px"></td>
+    <td><input id="dm${d.id}" type="number" value="${d.multiRate}" style="width:80px"></td>
+    <td><button onclick="editMatchPrices('${d.id}')">⚽ أسعار المباريات</button></td>
+    <td><select id="dt${d.id}"><option value="available" ${d.status==='available'?'selected':''}>✔ متاح</option><option value="maintenance" ${d.status==='maintenance'?'selected':''}>🔧 صيانة</option><option value="busy" ${d.status==='busy'?'selected':''}>● مشغول</option></select></td>
+    <td style="display:flex;gap:6px">
+      <button class="ok" onclick="saveDev('${d.id}')">حفظ</button>
+      <button class="danger" onclick="delDevice('${d.id}')">حذف</button>
+    </td>
+  </tr>`).join('')}
+  </table></div>`
+}
+
+function addDeviceModal(){
+  modal(`<div class="big">➕ إضافة جهاز جديد</div>
+    <div class="grid g2">
+      <div class="col"><label>اسم الجهاز</label><input id="nd_name" placeholder="مثال: PS 6"></div>
+      <div class="col"><label>سعر Single (ج/ساعة)</label><input id="nd_single" type="number" value="60"></div>
+      <div class="col"><label>سعر Multi (ج/ساعة)</label><input id="nd_multi" type="number" value="90"></div>
+    </div><br>
+    <div class="row"><button class="ok" onclick="saveNewDevice()">💾 إضافة</button><button class="gray" onclick="closeM()">إلغاء</button></div>`);
+}
+function saveNewDevice(){
+  let name=val('nd_name').trim();
+  if(!name)return alert('اكتب اسم الجهاز');
+  let newId='ps_'+id().slice(3,9);
+  state.devices.push({id:newId,name,status:'available',singleRate:+val('nd_single')||60,multiRate:+val('nd_multi')||90,matchPrices:DEF_MATCH_PRICES.map(x=>({...x}))});
+  closeM();save();show('Devices');
+}
+function delDevice(did){
+  if(sess(did))return alert('الجهاز عليه جلسة مفتوحة، أنهِ الجلسة أولاً');
+  if(!confirm('حذف الجهاز؟'))return;
+  state.devices=state.devices.filter(d=>d.id!==did);
+  save();show('Devices');
+}
+function saveDev(did){
+  let d=state.devices.find(x=>x.id==did);
+  if(sess(did)&&val('dt'+did)!=='busy')return alert('الجهاز عليه جلسة مفتوحة');
+  d.name=val('dn'+did);d.singleRate=+val('ds'+did);d.multiRate=+val('dm'+did);d.status=val('dt'+did);
+  save();
+}
+
+function editMatchPrices(did){
+  let d=state.devices.find(x=>x.id==did);
+  let prices=d.matchPrices||DEF_MATCH_PRICES.map(x=>({...x}));
+  modal(`<div class="big">⚽ أسعار مباريات ${esc(d.name)}</div>
+    <p class="muted small" style="margin-bottom:14px">حدد سعر كل مدة للعب المنفرد (Single) والجماعي (Multi)</p>
+    <div class="tw"><table><tr><th>المدة</th><th>Single (ج)</th><th>Multi (ج)</th></tr>
+    ${prices.map((p,i)=>`<tr>
+      <td style="font-weight:700">${p.mins} دقيقة (${p.mins/15} ربع)</td>
+      <td><input id="mp_s_${i}" type="number" value="${p.single}" style="width:80px"></td>
+      <td><input id="mp_m_${i}" type="number" value="${p.multi}" style="width:80px"></td>
+    </tr>`).join('')}
+    </table></div><br>
+    <div class="row"><button class="ok" onclick="saveMatchPrices('${did}',${prices.length})">💾 حفظ الأسعار</button><button class="gray" onclick="closeM()">إلغاء</button></div>`);
+}
+function saveMatchPrices(did,count){
+  let d=state.devices.find(x=>x.id==did);
+  let minsOptions=[15,30,45,60];
+  d.matchPrices=[];
+  for(let i=0;i<count;i++){
+    d.matchPrices.push({mins:minsOptions[i]||((i+1)*15),single:+document.getElementById('mp_s_'+i)?.value||0,multi:+document.getElementById('mp_m_'+i)?.value||0});
+  }
+  closeM();save();
+}
+
+// ============================================================
+// INVOICES
+// ============================================================
+function rInvoices(){vInvoices.innerHTML=`
+  <div class="page-header">
+    <div class="page-header-left"><div class="section-title">🧾 الفواتير</div><div class="page-subtitle muted">سجل جميع الجلسات المكتملة</div></div>
+  </div>
+  <div class="tw"><table><tr><th>#</th><th>التاريخ</th><th>الجهاز</th><th>العميل</th><th>النوع</th><th>المدة</th><th>الإجمالي</th><th></th></tr>
+  ${[...state.invoices].reverse().map(i=>`<tr>
+    <td><strong>#${i.no}</strong></td><td>${fmt(i.date)}</td><td>${i.deviceName}</td><td>${i.customer||'—'}</td>
+    <td>${i.sessionType==='match'?`<span class="match-badge">⚽ ${i.matchMins}د</span>`:'<span class="badge b-ok">مفتوحة</span>'}</td>
+    <td>${i.minutes} د</td>
+    <td><strong style="color:var(--green)">${money(i.total)} ج</strong></td>
+    <td><button onclick="showInv('${i.id}')">🧾 عرض</button></td>
+  </tr>`).join('')}
+  </table></div>`
+}
+
+// ============================================================
+// EXPENSES
+// ============================================================
+function rExpenses(){vExpenses.innerHTML=`
+  <div class="page-header">
+    <div class="page-header-left"><div class="section-title">💸 المصروفات</div><div class="page-subtitle muted">تسجيل وإدارة مصروفات المحل</div></div>
+    <button class="ok" onclick="expModal()">➕ إضافة مصروف</button>
+  </div>
+  <div class="tw"><table><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th>المبلغ</th><th></th></tr>
+  ${state.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.type}</td><td>${e.note}</td><td><strong style="color:var(--red)">${money(e.amount)} ج</strong></td><td><button class="danger" onclick="delExp('${e.id}')">حذف</button></td></tr>`).join('')}
+  </table></div>`
+}
+function expModal(){modal(`<div class="big">➕ إضافة مصروف</div>
+  <div class="grid g2">
+    <div class="col"><label>التاريخ</label><input id="ed" type="date" value="${today()}"></div>
+    <div class="col"><label>النوع</label><input id="et" placeholder="مثال: إيجار، كهرباء"></div>
+    <div class="col"><label>المبلغ</label><input id="ea" type="number" placeholder="0.00"></div>
+    <div class="col"><label>البيان</label><input id="en" placeholder="تفاصيل إضافية"></div>
+  </div><br>
+  <div class="row"><button class="ok" onclick="saveExp()">💾 حفظ</button><button class="gray" onclick="closeM()">إلغاء</button></div>`)}
+function saveExp(){state.expenses.push({id:id(),date:val('ed'),type:val('et'),amount:+val('ea'),note:val('en')});closeM();save()}
+function delExp(idv){state.expenses=state.expenses.filter(e=>e.id!==idv);save()}
+
+// ============================================================
+// REPORTS
+// ============================================================
+function rReports(){
+  let ti=state.invoices.filter(i=>i.date.slice(0,10)==today()),te=state.expenses.filter(e=>e.date==today()),
+    play=ti.reduce((a,i)=>a+i.playTotal,0),dr=ti.reduce((a,i)=>a+i.drinkTotal,0),
+    tot=ti.reduce((a,i)=>a+i.total,0),ex=te.reduce((a,e)=>a+e.amount,0),
+    matches=ti.filter(i=>i.sessionType==='match').length,
+    open=ti.filter(i=>i.sessionType!=='match').length;
+  vReports.innerHTML=`
+    <div class="page-header">
+      <div class="page-header-left"><div class="section-title">📊 تقرير اليوم</div><div class="page-subtitle muted">${today()}</div></div>
+    </div>
+    <div class="grid g3">
+      <div class="kpi kpi-green"><div class="kpi-label">دخل اللعب</div><b>${money(play)} ج</b></div>
+      <div class="kpi"><div class="kpi-label">دخل المشروبات</div><b>${money(dr)} ج</b></div>
+      <div class="kpi kpi-green"><div class="kpi-label">إجمالي الإيراد</div><b>${money(tot)} ج</b></div>
+      <div class="kpi kpi-red"><div class="kpi-label">المصروفات</div><b>${money(ex)} ج</b></div>
+      <div class="kpi kpi-${(tot-ex)>=0?'green':'red'}"><div class="kpi-label">صافي الربح</div><b>${money(tot-ex)} ج</b></div>
+      <div class="kpi kpi-orange"><div class="kpi-label">عدد الجلسات</div><b>${ti.length}</b></div>
+      <div class="kpi"><div class="kpi-label">جلسات مفتوحة</div><b>${open}</b></div>
+      <div class="kpi" style="--kpi-c:var(--purple)"><div class="kpi-label">مباريات</div><b style="color:#a78bfa">${matches}</b></div>
+    </div>`;
+}
+
+// ============================================================
+// USERS
+// ============================================================
+function rUsers(){vUsers.innerHTML=`
+  <div class="page-header">
+    <div class="page-header-left"><div class="section-title">👥 المستخدمين</div><div class="page-subtitle muted">إدارة حسابات المستخدمين والصلاحيات</div></div>
+    <button class="ok" onclick="userModal()">➕ إضافة مستخدم</button>
+  </div>
+  <div class="tw"><table><tr><th>اسم المستخدم</th><th>الصلاحية</th><th>الحالة</th><th></th></tr>
+  ${state.users.map(u=>`<tr><td><strong>${u.username}</strong></td><td><span class="badge ${u.role==='Admin'?'b-busy':'b-ok'}">${u.role}</span></td><td>${u.active?'<span class="badge b-ok">فعال</span>':'<span class="badge b-bad">غير فعال</span>'}</td><td><button onclick="userModal('${u.id}')">✏ تعديل</button></td></tr>`).join('')}
+  </table></div>`
+}
+function userModal(uid=''){let u=state.users.find(x=>x.id==uid)||{username:'',password:'1234',role:'Cashier',active:true};
+  modal(`<div class="big">${uid?'✏ تعديل مستخدم':'➕ مستخدم جديد'}</div>
+    <div class="grid g2">
+      <div class="col"><label>اسم المستخدم</label><input id="un" value="${esc(u.username)}" placeholder="username"></div>
+      <div class="col"><label>كلمة المرور</label><input id="up" value="${esc(u.password)}" placeholder="password"></div>
+      <div class="col"><label>الصلاحية</label><select id="ur"><option ${u.role==='Admin'?'selected':''}>Admin</option><option ${u.role==='Cashier'?'selected':''}>Cashier</option></select></div>
+      <div class="col"><label>الحالة</label><select id="ua"><option value="true" ${u.active?'selected':''}>✔ فعال</option><option value="false" ${!u.active?'selected':''}>✕ غير فعال</option></select></div>
+    </div><br>
+    <div class="row"><button class="ok" onclick="saveUser('${uid}')">💾 حفظ</button><button class="gray" onclick="closeM()">إلغاء</button></div>`);
+}
+function saveUser(uid){let n=val('un').trim();if(!n)return alert('اكتب اسم المستخدم');if(state.users.some(u=>u.username.toLowerCase()==n.toLowerCase()&&u.id!==uid))return alert('موجود');let o={username:n,password:val('up'),role:val('ur'),active:val('ua')==='true'};if(uid)Object.assign(state.users.find(x=>x.id==uid),o);else state.users.push({id:id(),...o});closeM();save()}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function rSettings(){let s=st();vSettings.innerHTML=`
+  <div class="page-header">
+    <div class="page-header-left"><div class="section-title">⚙️ الإعدادات والمزامنة</div><div class="page-subtitle muted">إعدادات الاتصال والبيانات</div></div>
+  </div>
+  <div class="settings-section">
+    <div class="big" style="font-size:16px;margin-bottom:12px">🌐 المزامنة Online</div>
+    <div class="settings-note">Hybrid Mode: لو النت فصل، البرنامج يكمل Offline ويحفظ العمليات في قائمة انتظار. لما النت يرجع يعمل Auto Sync تلقائياً.</div>
+    <div class="kpi" style="margin-bottom:14px">
+      <div class="kpi-label">حالة الشبكة</div>
+      <b style="font-size:16px">${navigator.onLine?'🟢 متصل':'🔴 غير متصل'}</b>
+      <div class="small muted" style="margin-top:4px">عمليات في الانتظار: <strong>${queue().length}</strong></div>
+    </div>
+    <div class="grid g2">
+      <div class="col"><label>وضع المزامنة</label><select id="mode"><option value="offline" ${s.mode==='offline'?'selected':''}>Offline فقط</option><option value="supabase" ${s.mode==='supabase'?'selected':''}>Hybrid Supabase</option></select></div>
+      <div class="col"><label>Supabase URL</label><input id="url" value="${esc(s.url)}" placeholder="https://xxx.supabase.co"></div>
+      <div class="col" style="grid-column:1/-1"><label>Anon Key</label><textarea id="key" rows="3" placeholder="eyJ...">${esc(s.key)}</textarea></div>
+    </div>
+    <div class="row mt">
+      <button class="ok" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+      <button class="ok" onclick="manualSync()">🔄 مزامنة الآن</button>
+      <button onclick="showQueue()">📋 عرض الانتظار</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="big" style="font-size:16px;margin-bottom:12px">🔔 إعدادات التنبيهات</div>
+    <div class="settings-note">التنبيهات تعمل تلقائياً للمباريات المحددة الوقت: قبل 10 دقائق (تحذير)، قبل 5 دقائق (خطر)، عند الانتهاء، وبعد التجاوز بـ 5 دقائق.</div>
+    <button onclick="reqNotifPerm();alert('${Notification&&Notification.permission==='granted'?'الإشعارات مفعلة ✓':'اضغط السماح في نافذة المتصفح'}')">🔔 تفعيل الإشعارات</button>
+    <span style="font-size:12px;color:var(--text-muted);margin-right:10px">الحالة: ${(typeof Notification!=='undefined')?Notification.permission:'غير مدعوم'}</span>
+  </div>
+  <div class="settings-section">
+    <div class="big" style="font-size:16px;margin-bottom:12px">💾 البيانات والنسخ الاحتياطي</div>
+    <div class="row">
+      <button onclick="exportBackup()">📤 تصدير Backup</button>
+      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;font-weight:700;color:var(--text-secondary);flex:1;justify-content:center">
+        📥 استيراد Backup <input type="file" onchange="importBackup(event)" style="display:none;width:auto"></label>
+    </div>
+    <div class="row mt">
+      <button class="danger" onclick="clearQueue()">🗑 مسح الانتظار</button>
+      <button class="danger" onclick="resetAll()">⚠️ تصفير الكل</button>
+    </div>
+  </div>`
+}
+function saveSettings(){setst({mode:val('mode'),url:val('url').trim().replace(/\/$/,''),key:val('key').trim()});alert('تم الحفظ')}
+function exportBackup(){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));a.download='ps_backup_'+today()+'.json';a.click()}
+function importBackup(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{state=JSON.parse(r.result);save()};r.readAsText(f)}
+function resetAll(){if(confirm('حذف كل البيانات؟')){state=def();save()}}
+
+// ============================================================
+// MODAL
+// ============================================================
+function modal(h){document.getElementById('mc').innerHTML=h;document.getElementById('modal').classList.remove('hidden')}
+function closeM(){document.getElementById('modal').classList.add('hidden')}
+
+// ============================================================
+// SYNC QUEUE
+// ============================================================
+function queue(){try{return JSON.parse(localStorage.getItem(QK))||[]}catch(e){return[]}}
+function setQueue(q){localStorage.setItem(QK,JSON.stringify(q.slice(-50)))}
+function markPending(summary){if(st().mode!=='supabase')return;let q=queue();q.push({id:id(),time:new Date().toISOString(),summary:summary||'تغيير',state:state});setQueue(q)}
+function clearQueue(){if(confirm('مسح قائمة العمليات المنتظرة؟')){setQueue([]);dirty=false;render();alert('تم مسح قائمة الانتظار')}}
+function showQueue(){let q=queue();modal(`<div class="big">📋 قائمة انتظار المزامنة</div>
+  <p class="muted small" style="margin-bottom:14px">هذه العمليات محفوظة على الجهاز وستُرفع تلقائيًا عند رجوع الإنترنت.</p>
+  ${q.length?`<div class="tw"><table><tr><th>الوقت</th><th>العملية</th></tr>${q.map(x=>`<tr><td>${fmt(x.time)}</td><td>${esc(x.summary)}</td></tr>`).join('')}</table></div>`:'<p class="muted" style="text-align:center;padding:20px">لا توجد عمليات منتظرة ✔</p>'}
+  <br><div class="row"><button class="ok" onclick="manualSync()">🔄 مزامنة الآن</button><button class="gray" onclick="closeM()">إغلاق</button></div>`)}
+
+// ============================================================
+// SUPABASE / SYNC
+// ============================================================
+async function req(m,path,body){let s=st();if(!navigator.onLine)throw Error('لا يوجد اتصال بالإنترنت');if(!s.url||!s.key)throw Error('بيانات Supabase غير مكتملة');let r=await fetch(s.url+'/rest/v1/'+path,{method:m,headers:{apikey:s.key,Authorization:'Bearer '+s.key,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:body?JSON.stringify(body):undefined});if(!r.ok)throw Error(await r.text());return await r.json()}
+async function loadCloud(){let rows=await req('GET','ps_cafe_state?id=eq.main&select=*');if(rows&&rows[0]&&!dirty&&queue().length===0){state=rows[0].data;localStorage.setItem(K,JSON.stringify(state));render();return true}return !!(rows&&rows[0])}
+async function saveCloud(){await req('POST','ps_cafe_state',[{id:'main',data:state,updated_at:new Date().toISOString()}]);dirty=false;setQueue([]);render();return true}
+async function flushQueue(){if(st().mode!=='supabase')return false;if(!navigator.onLine)throw Error('النت غير متصل. تم حفظ العملية Offline وستتم المزامنة تلقائيًا.');let q=queue();if(q.length){state=q[q.length-1].state;localStorage.setItem(K,JSON.stringify(state))}await saveCloud();return true}
+async function manualSync(){if(st().mode!=='supabase')return alert('فعل Hybrid Supabase من الإعدادات أولا');try{await flushQueue();await loadCloud();alert('تمت المزامنة بنجاح')}catch(e){render();alert('لم تتم المزامنة الآن: '+e.message)}}
+function sched(){if(st().mode==='supabase'){clearTimeout(window.sd);window.sd=setTimeout(()=>flushQueue().catch(e=>{console.warn(e.message);render()}),1200)}}
+function setup(){clearInterval(timer);window.removeEventListener('online',window.__psOnline||(()=>{}));window.__psOnline=()=>{if(st().mode==='supabase')flushQueue().catch(console.warn)};window.addEventListener('online',window.__psOnline);if(st().mode==='supabase')timer=setInterval(()=>{if(dirty||queue().length)flushQueue().catch(e=>{console.warn(e.message);render()});else loadCloud().catch(console.warn)},15000)}
+
+load();setup();
+</script>
+
+<!-- Service Worker Registration -->
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg=>{
+        console.log('SW registered:', reg.scope);
+        // Check for updates every 60s
+        setInterval(()=>reg.update(), 60000);
+      })
+      .catch(err=>console.warn('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
