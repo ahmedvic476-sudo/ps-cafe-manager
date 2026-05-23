@@ -1,13 +1,13 @@
 // ============================================================
 // PS Cafe Manager — Service Worker
-// Version: 6.1.1 LIVE HOTFIX
+// Version: 6.2.0 OWNER BRANDING SECURE FOUNDATION
 // ============================================================
-const CACHE_NAME = 'ps-cafe-v6.1.2';
-const OFFLINE_URL = './index.html?v=6.1.2';
+const CACHE_NAME = 'ps-cafe-v6.2.0';
+const OFFLINE_URL = './index.html?v=6.2.0';
 const PRECACHE_ASSETS = [
-  './', './index.html?v=6.1.2', './manifest.json?v=6.1.2',
+  './', './index.html?v=6.2.0', './manifest.json?v=6.2.0',
   './icon-72.png','./icon-96.png','./icon-128.png','./icon-144.png',
-  './icon-152.png','./icon-192.png','./icon-384.png','./icon-512.png'
+  './icon-152.png','./icon-192.png','./icon-384.png','./icon-512.png','./brand-avatar.png'
 ];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_ASSETS)).then(() => self.skipWaiting()));
