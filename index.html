@@ -338,7 +338,7 @@ td button{padding:6px 12px;font-size:12px}
     <div class="login-divider"></div>
     <div class="col">
       <div><label>اسم المستخدم</label><input id="lu" value="admin" autocomplete="username"></div>
-      <div><label>كلمة المرور</label><input id="lp" type="password" value="1234" autocomplete="current-password"></div>
+      <div><label>كلمة المرور</label><input id="lp" type="password" placeholder="كلمة المرور" autocomplete="current-password"></div>
       <button class="btn-lg ok" onclick="login()" style="margin-top:4px">🔑 دخول</button>
       <div id="lm" class="small" style="color:#ff8a9a;text-align:center;min-height:18px"></div>
     </div>
@@ -441,6 +441,7 @@ function login(){
   document.getElementById('app').classList.remove('hidden');
   tab='Dashboard';tabs();setup();
   render();
+  if(p==='1234')showNotice('تنبيه أمان: غيّر كلمة المرور الافتراضية من المستخدمين قبل الاستخدام الحقيقي.', 'warn');
 }
 function logout(){user=null;document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden')}
 
@@ -497,6 +498,41 @@ function badge(d){
   let t=d.status==='available'?'✔ متاح':d.status==='busy'?'● مشغول':'✕ صيانة';
   return `<span class="badge ${c}">${t}</span>`
 }
+
+
+// ============================================================
+// PWA INSTALLATION
+// ============================================================
+function isInstalledApp(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function installState(){
+  if(isInstalledApp()) return {cls:'status-good',label:'التطبيق مثبت ويعمل كوضع مستقل ✓'};
+  if(installPromptEvent) return {cls:'status-good',label:'جاهز للتثبيت كتطبيق على الهاتف ✓'};
+  return {cls:'status-warn',label:'غير مثبت بعد — بعد تحديث النسخة اضغط فحص التثبيت.'};
+}
+async function installPwa(){
+  if(isInstalledApp()){showNotice('التطبيق مثبت بالفعل على الهاتف ✓','success');return;}
+  if(!installPromptEvent){
+    showNotice('لم يظهر خيار التثبيت بعد. اضغط تحديث إجباري آمن ثم افتح الصفحة من Chrome وحاول مجددًا.', 'warn');
+    return;
+  }
+  installPromptEvent.prompt();
+  const choice = await installPromptEvent.userChoice;
+  installPromptEvent = null;
+  if(choice.outcome === 'accepted') showNotice('تم قبول تثبيت التطبيق ✓', 'success');
+  else showNotice('تم إلغاء التثبيت. يمكنك المحاولة لاحقًا.', 'warn');
+  render();
+}
+window.addEventListener('beforeinstallprompt', event=>{
+  event.preventDefault();
+  installPromptEvent = event;
+  if(user && tab==='Settings') render();
+});
+window.addEventListener('appinstalled', ()=>{
+  installPromptEvent = null;
+  if(user){showNotice('تم تثبيت PS Cafe Manager بنجاح ✓','success');render();}
+});
 
 // ============================================================
 // ALERT / NOTIFICATION SYSTEM
@@ -1075,6 +1111,10 @@ function rSettings(){let s=st(),sm=syncMeta(),ns=notificationState();let syncCla
     <div class="page-header-left"><div class="section-title">⚙️ الإعدادات والمزامنة</div><div class="page-subtitle muted">إعدادات الاتصال والبيانات • ${APP_VERSION}</div></div>
   </div>
   <div class="settings-section">
+    <div class="big" style="font-size:16px;margin-bottom:12px">🔐 تنبيه الأمان</div>
+    <div class="status-panel ${state.users.some(u=>u.password==='1234')?'status-bad':'status-good'}"><strong>${state.users.some(u=>u.password==='1234')?'يوجد مستخدم بكلمة المرور الافتراضية 1234. غيّرها من تبويب المستخدمين قبل أي تشغيل حقيقي.':'لا توجد كلمة مرور افتراضية ظاهرة في المستخدمين ✓'}</strong><br><span class="muted small">هذا التطبيق ما زال يحفظ المستخدمين محليًا داخل المتصفح؛ أمان الإنتاج يحتاج مرحلة لاحقة.</span></div>
+  </div>
+  <div class="settings-section">
     <div class="big" style="font-size:16px;margin-bottom:12px">🌐 المزامنة Online</div>
     <div class="settings-note">Hybrid Mode: لو النت فصل، البرنامج يكمل Offline ويحفظ العمليات في قائمة انتظار. لا تظهر علامة نجاح المزامنة إلا بعد نجاح اتصال فعلي بـ Supabase.</div>
     <div class="status-panel ${syncClass}">
@@ -1100,6 +1140,15 @@ function rSettings(){let s=st(),sm=syncMeta(),ns=notificationState();let syncCla
     <div class="settings-note">التنبيهات تعمل للمباريات المحددة الوقت. لا يتم طلب إذن المتصفح تلقائيًا؛ اضغط الزر أدناه لتفعيلها بإرادتك.</div>
     <div class="status-panel ${ns.cls}"><strong>الحالة:</strong> ${ns.label}</div>
     <div class="settings-actions"><button class="btn-blue" onclick="enableNotifications()">🔔 تفعيل الإشعارات</button></div>
+  </div>
+  <div class="settings-section">
+    <div class="big" style="font-size:16px;margin-bottom:12px">📱 تثبيت التطبيق على الهاتف</div>
+    <div class="settings-note">تم تجهيز النسخة للتثبيت كتطبيق PWA بأيقونة PS Cafe، وليس كاختصار متصفح فقط.</div>
+    <div class="status-panel ${installState().cls}"><strong>الحالة:</strong> ${installState().label}</div>
+    <div class="settings-actions">
+      <button class="btn-blue" onclick="installPwa()">📲 تثبيت التطبيق</button>
+      <button class="gray" onclick="clearAppCacheAndReload()">🔄 فحص التثبيت بعد التحديث</button>
+    </div>
   </div>
   <div class="settings-section">
     <div class="big" style="font-size:16px;margin-bottom:12px">📲 إصدار التطبيق والتحديث</div>

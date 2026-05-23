@@ -2,12 +2,12 @@
 // PS Cafe Manager — Service Worker
 // Version: 6.1.1 LIVE HOTFIX
 // ============================================================
-const CACHE_NAME = 'ps-cafe-v6.1.1';
-const OFFLINE_URL = './index.html?v=6.1.1';
+const CACHE_NAME = 'ps-cafe-v6.1.2';
+const OFFLINE_URL = './index.html?v=6.1.2';
 const PRECACHE_ASSETS = [
-  './', './index.html?v=6.1.1', './manifest.json?v=6.1.1',
-  './icons/icon-72.png','./icons/icon-96.png','./icons/icon-128.png','./icons/icon-144.png',
-  './icons/icon-152.png','./icons/icon-192.png','./icons/icon-384.png','./icons/icon-512.png'
+  './', './index.html?v=6.1.2', './manifest.json?v=6.1.2',
+  './icon-72.png','./icon-96.png','./icon-128.png','./icon-144.png',
+  './icon-152.png','./icon-192.png','./icon-384.png','./icon-512.png'
 ];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_ASSETS)).then(() => self.skipWaiting()));
@@ -40,6 +40,6 @@ self.addEventListener('sync', event => {
 self.addEventListener('push', event => {
   if(!event.data) return;
   const data=event.data.json();
-  event.waitUntil(self.registration.showNotification(data.title || 'PS Cafe Manager', {body:data.body || '',icon:'./icons/icon-192.png',badge:'./icons/icon-96.png',dir:'rtl',lang:'ar',vibrate:[200,100,200],data}));
+  event.waitUntil(self.registration.showNotification(data.title || 'PS Cafe Manager', {body:data.body || '',icon:'./icon-192.png',badge:'./icon-96.png',dir:'rtl',lang:'ar',vibrate:[200,100,200],data}));
 });
 self.addEventListener('notificationclick', event => {event.notification.close();event.waitUntil(clients.openWindow('./'));});
