@@ -1,8 +1,8 @@
 {
   "name": "PS Cafe Manager",
   "short_name": "PS Cafe",
-  "description": "إدارة كافيه بلايستيشن — جلسات ومباريات وفواتير وتقارير",
-  "start_url": "./index.html",
+  "description": "إدارة كافيه بلايستيشن — جلسات ومباريات وفواتير وتقارير • V6.1.1",
+  "start_url": "./index.html?v=6.1.1",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -10,7 +10,10 @@
   "background_color": "#060b14",
   "lang": "ar",
   "dir": "rtl",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "icons/icon-72.png",
@@ -75,7 +78,13 @@
       "short_name": "الرئيسية",
       "description": "فتح لوحة الأجهزة مباشرة",
       "url": "./index.html",
-      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "icons/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
     }
-  ]
+  ],
+  "id": "./?app=ps-cafe-manager"
 }

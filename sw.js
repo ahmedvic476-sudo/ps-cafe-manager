@@ -1,125 +1,45 @@
 // ============================================================
 // PS Cafe Manager — Service Worker
-// Version: 1.0.0
+// Version: 6.1.1 LIVE HOTFIX
 // ============================================================
-const CACHE_NAME = 'ps-cafe-v1';
-const OFFLINE_URL = './index.html';
-
-// Files to cache on install
+const CACHE_NAME = 'ps-cafe-v6.1.1';
+const OFFLINE_URL = './index.html?v=6.1.1';
 const PRECACHE_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './', './index.html?v=6.1.1', './manifest.json?v=6.1.1',
+  './icons/icon-72.png','./icons/icon-96.png','./icons/icon-128.png','./icons/icon-144.png',
+  './icons/icon-152.png','./icons/icon-192.png','./icons/icon-384.png','./icons/icon-512.png'
 ];
-
-// ============================================================
-// INSTALL — cache all static assets
-// ============================================================
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(PRECACHE_ASSETS);
-    }).then(() => self.skipWaiting())
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_ASSETS)).then(() => self.skipWaiting()));
 });
-
-// ============================================================
-// ACTIVATE — clean up old caches
-// ============================================================
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
-  );
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
-
-// ============================================================
-// FETCH — Cache First for assets, Network First for API calls
-// ============================================================
+async function networkFirst(request){
+  try{
+    const response=await fetch(request,{cache:'no-store'});
+    if(response&&response.ok){const cache=await caches.open(CACHE_NAME);cache.put(request,response.clone());}
+    return response;
+  }catch(e){return (await caches.match(request)) || (await caches.match(OFFLINE_URL));}
+}
+async function staleWhileRevalidate(request){
+  const cached=await caches.match(request);
+  const fresh=fetch(request).then(async response=>{if(response&&response.ok){const cache=await caches.open(CACHE_NAME);cache.put(request,response.clone());}return response;}).catch(()=>null);
+  return cached || (await fresh) || (await caches.match(OFFLINE_URL));
+}
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
-
-  // Skip Supabase API calls — always go to network
-  if (url.hostname.includes('supabase.co')) {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        // Return a JSON error response so app can handle it gracefully
-        return new Response(
-          JSON.stringify({ error: 'offline', message: 'No network' }),
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-      })
-    );
-    return;
-  }
-
-  // For all app files — Cache First strategy
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-
-      return fetch(event.request).then(response => {
-        // Cache valid responses
-        if (response && response.status === 200 && response.type !== 'opaque') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        // Offline fallback — return the app shell
-        return caches.match(OFFLINE_URL);
-      });
-    })
-  );
+  if(event.request.method !== 'GET') return;
+  const url=new URL(event.request.url);
+  if(url.hostname.includes('supabase.co')){event.respondWith(fetch(event.request));return;}
+  if(event.request.mode==='navigate' || url.pathname.endsWith('/index.html')){event.respondWith(networkFirst(event.request));return;}
+  event.respondWith(staleWhileRevalidate(event.request));
 });
-
-// ============================================================
-// BACKGROUND SYNC — retry queued requests when back online
-// ============================================================
 self.addEventListener('sync', event => {
-  if (event.tag === 'ps-sync') {
-    event.waitUntil(
-      self.clients.matchAll().then(clients => {
-        clients.forEach(client =>
-          client.postMessage({ type: 'BACKGROUND_SYNC', tag: 'ps-sync' })
-        );
-      })
-    );
-  }
+  if(event.tag === 'ps-sync') event.waitUntil(self.clients.matchAll().then(clients => clients.forEach(c => c.postMessage({type:'BACKGROUND_SYNC',tag:'ps-sync'}))));
 });
-
-// ============================================================
-// PUSH NOTIFICATIONS (future use)
-// ============================================================
 self.addEventListener('push', event => {
-  if (!event.data) return;
-  const data = event.data.json();
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'PS Cafe Manager', {
-      body: data.body || '',
-      icon: './icons/icon-192.png',
-      badge: './icons/icon-96.png',
-      dir: 'rtl',
-      lang: 'ar',
-      vibrate: [200, 100, 200],
-      data: data
-    })
-  );
+  if(!event.data) return;
+  const data=event.data.json();
+  event.waitUntil(self.registration.showNotification(data.title || 'PS Cafe Manager', {body:data.body || '',icon:'./icons/icon-192.png',badge:'./icons/icon-96.png',dir:'rtl',lang:'ar',vibrate:[200,100,200],data}));
 });
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(
-    clients.openWindow('./')
-  );
-});
+self.addEventListener('notificationclick', event => {event.notification.close();event.waitUntil(clients.openWindow('./'));});

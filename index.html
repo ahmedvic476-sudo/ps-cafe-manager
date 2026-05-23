@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>PS Cafe Manager</title>
+<title>PS Cafe Manager • V6.1.1</title>
 
 <!-- PWA Meta Tags -->
 <meta name="application-name" content="PS Cafe Manager">
@@ -18,14 +18,14 @@
 <meta name="msapplication-tap-highlight" content="no">
 
 <!-- PWA Manifest -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json?v=6.1.1">
 
 <!-- Apple Touch Icons -->
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png?v=6.1.1">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-192.png?v=6.1.1">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png?v=6.1.1">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=6.1.1">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=6.1.1">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -255,9 +255,29 @@ td button{padding:6px 12px;font-size:12px}
 .match-price-mins{font-size:12px;color:var(--text-muted);white-space:nowrap;}
 .match-price-val{font-size:15px;font-weight:800;color:var(--blue);white-space:nowrap;}
 
+
+/* V6.1.1 LIVE HOTFIX — verified sync, notification permission, PWA update controls */
+.version-pill{display:inline-flex;align-items:center;margin-right:6px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800;background:var(--blue-dim);color:#8ab4ff;border:1px solid rgba(41,121,255,.35);vertical-align:middle}
+.status-panel{margin-top:12px;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-base);font-size:13px;line-height:1.8;color:var(--text-secondary)}
+.status-panel strong{color:var(--text-primary)}
+.status-good{border-color:rgba(0,200,83,.28);background:rgba(0,200,83,.05)}
+.status-warn{border-color:rgba(255,152,0,.30);background:rgba(255,152,0,.05)}
+.status-bad{border-color:rgba(255,61,87,.32);background:rgba(255,61,87,.06)}
+.settings-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.settings-actions button{flex:1;min-width:150px}
+.btn-blue{background:var(--blue-dim);border-color:rgba(41,121,255,.40);color:#b9d4ff}
+.btn-blue:hover{background:var(--blue);color:#fff}
+.sync.pending{background:var(--orange-dim);border-color:rgba(255,152,0,.2);color:var(--orange)}.sync.pending::before{background:var(--orange)}
+.sync.unknown{background:var(--bg-elevated);border-color:var(--border-light);color:var(--text-secondary)}.sync.unknown::before{background:var(--text-muted)}
+.toast-item.t-ok{border-color:rgba(0,200,83,.45);background:rgba(0,50,24,.96)}
+.toast-item.t-info{border-color:rgba(41,121,255,.42);background:rgba(9,24,48,.96)}
+.print-only{display:none}
+
 /* PRINT */
 @media print{
   .top,.tabs,button,.no-print,#sl,.top-actions,#alert-toast{display:none!important}
+  .print-only{display:block!important}
+  @page{size:auto;margin:12mm}
   body{background:white;color:black;font-family:Arial,sans-serif}
   .card,.box,.device-card,.kpi,.settings-section{box-shadow:none;background:white;color:black;border:1px solid #ccc;}
   .modal{position:static;background:transparent;backdrop-filter:none}
@@ -330,7 +350,7 @@ td button{padding:6px 12px;font-size:12px}
     <div class="top-brand">
       <span class="top-brand-icon">🎮</span>
       <div>
-        <div class="top-brand-name">PS Cafe Manager</div>
+        <div class="top-brand-name">PS Cafe Manager <span class="version-pill">V6.1.1</span></div>
         <div class="top-meta small">المستخدم: <span id="cu"></span>&nbsp;|&nbsp;<span id="cr"></span>&nbsp;|&nbsp;<span id="sl" class="sync">Offline</span></div>
       </div>
     </div>
@@ -359,8 +379,13 @@ td button{padding:6px 12px;font-size:12px}
 // ============================================================
 // CORE STATE & STORAGE
 // ============================================================
-const K='ps_cafe_v4_state', SK='ps_cafe_v4_settings', QK='ps_cafe_v4_sync_queue';
-let state,user=null,tab='Dashboard',dirty=false,timer=null;
+const APP_VERSION='V6.1.1';
+const K='ps_cafe_v4_state', SK='ps_cafe_v4_settings', QK='ps_cafe_v4_sync_queue', SMK='ps_cafe_v4_sync_meta';
+let state,user=null,tab='Dashboard',dirty=false,timer=null,swRegistration=null;
+
+function syncMeta(){try{return JSON.parse(localStorage.getItem(SMK))||{verified:false,lastSuccess:'',lastError:'',syncing:false}}catch(e){return{verified:false,lastSuccess:'',lastError:'',syncing:false}}}
+function setSyncMeta(patch){let m={...syncMeta(),...patch};localStorage.setItem(SMK,JSON.stringify(m));if(user)render();return m}
+function shortTime(iso){return iso?new Date(iso).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):'—'}
 
 function id(){return 'id_'+Math.random().toString(36).slice(2)+Date.now().toString(36)}
 
@@ -415,7 +440,6 @@ function login(){
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   tab='Dashboard';tabs();setup();
-  reqNotifPerm();
   render();
 }
 function logout(){user=null;document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden')}
@@ -432,9 +456,14 @@ function show(t){tab=t;tabs();render()}
 function render(){
   if(!user)return;
   cu.textContent=user.username;cr.textContent=user.role;
-  let ss=st();let q=queue().length,online=navigator.onLine;
-  sl.textContent=ss.mode==='supabase'?(online?(q?'Online — Pending '+q:'Online ✓'):'Offline — Pending '+q):'Offline Local';
-  sl.className='sync '+(ss.mode==='supabase'?(online?(q?'warn':'on'):'err'):'');
+  let ss=st(),q=queue().length,online=navigator.onLine,sm=syncMeta();
+  if(ss.mode!=='supabase'){sl.textContent='Offline Local';sl.className='sync';}
+  else if(!online){sl.textContent='Offline — Pending '+q;sl.className='sync err';}
+  else if(sm.syncing){sl.textContent='جاري المزامنة…';sl.className='sync pending';}
+  else if(q){sl.textContent='Pending '+q;sl.className='sync pending';}
+  else if(sm.verified&&sm.lastSuccess){sl.textContent='Synced ✓';sl.className='sync on';}
+  else if(sm.verified){sl.textContent='Connected ✓';sl.className='sync unknown';}
+  else{sl.textContent='Online — غير متحقق';sl.className='sync unknown';}
   ['Dashboard','Products','Devices','Invoices','Expenses','Reports','Users','Settings'].forEach(x=>document.getElementById('v'+x).classList.add('hidden'));
   document.getElementById('v'+tab).classList.remove('hidden');
   rDash();rProducts();rDevices();rInvoices();rExpenses();rReports();rUsers();rSettings();
@@ -474,9 +503,29 @@ function badge(d){
 // ============================================================
 const alertedSessions={};// track which alerts have fired: {sid: {w10,w5,end,over}}
 
-function reqNotifPerm(){
-  if('Notification' in window && Notification.permission==='default'){
-    Notification.requestPermission();
+function notificationState(){
+  if(!window.isSecureContext)return {code:'insecure',label:'يتطلب HTTPS',cls:'status-bad'};
+  if(!('Notification' in window))return {code:'unsupported',label:'غير مدعوم على هذا المتصفح',cls:'status-bad'};
+  if(Notification.permission==='granted')return {code:'granted',label:'مفعلة ✓',cls:'status-good'};
+  if(Notification.permission==='denied')return {code:'denied',label:'محظورة من المتصفح',cls:'status-bad'};
+  return {code:'default',label:'لم يتم السماح بعد',cls:'status-warn'};
+}
+async function enableNotifications(){
+  const current=notificationState();
+  if(current.code==='insecure'){showNotice('الإشعارات تحتاج فتح التطبيق من رابط HTTPS.', 'danger');return;}
+  if(current.code==='unsupported'){showNotice('الإشعارات غير مدعومة على هذا المتصفح.', 'danger');return;}
+  if(current.code==='granted'){showNotice('الإشعارات مفعلة بالفعل ✓', 'success');render();return;}
+  if(current.code==='denied'){
+    showNotice('الإشعارات محظورة. افتح إعدادات الموقع في Chrome ثم اسمح بالإشعارات.', 'danger');render();return;
+  }
+  try{
+    const result=await Notification.requestPermission();
+    render();
+    if(result==='granted') showNotice('تم تفعيل الإشعارات بنجاح ✓', 'success');
+    else if(result==='denied') showNotice('تم حظر الإشعارات. يمكنك السماح بها من إعدادات الموقع.', 'danger');
+    else showNotice('لم يتم منح الإذن. فعّله من إعدادات الموقع عند الحاجة.', 'warn');
+  }catch(err){
+    render();showNotice('تعذر طلب إذن الإشعارات على هذا المتصفح.', 'danger');
   }
 }
 
@@ -529,9 +578,13 @@ function showToast(icon,msg,cls){
   let wrap=document.getElementById('alert-toast');
   let el=document.createElement('div');
   el.className='toast-item '+cls;
-  el.innerHTML=`<span class="toast-icon">${icon}</span><span>${msg}</span>`;
+  el.innerHTML=`<span class="toast-icon">${icon}</span><span>${esc(msg)}</span>`;
   wrap.appendChild(el);
-  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity 0.4s';setTimeout(()=>el.remove(),400)},5000);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity 0.4s';setTimeout(()=>el.remove(),400)},5200);
+}
+function showNotice(msg,type='info'){
+  const map={success:['✅','t-ok'],danger:['⚠️','t-danger'],warn:['⏰','t-warn'],info:['ℹ️','t-info']};
+  const pair=map[type]||map.info;showToast(pair[0],msg,pair[1]);
 }
 
 function checkAlerts(){
@@ -807,7 +860,20 @@ function showInv(iid){
     <div class="invoice-row"><span>رسوم اللعب</span><span>${money(i.playTotal)} ج</span></div>
     <div class="invoice-row"><span>رسوم المشروبات</span><span>${money(i.drinkTotal)} ج</span></div>
     <div class="invoice-total-row"><span>الإجمالي</span><span>${money(i.total)} ج</span></div>
-    <br><div class="row"><button onclick="window.print()">🖨 طباعة</button><button class="gray" onclick="closeM()">إغلاق</button></div>`);
+    <br><div class="row"><button onclick="printInvoice('${i.id}')">🖨 طباعة / PDF</button><button class="gray" onclick="closeM()">إغلاق</button></div>`);
+}
+
+
+function printInvoice(iid){
+  const i=state.invoices.find(x=>x.id===iid); if(!i)return;
+  const itemRows=(i.items||[]).map(x=>`<tr><td>${esc(x.name)}</td><td>${x.qty}</td><td>${money(x.price)}</td><td>${money(x.price*x.qty)}</td></tr>`).join('');
+  const w=window.open('','_blank','width=460,height=760');
+  if(!w){showNotice('اسمح بفتح النوافذ المنبثقة للطباعة.', 'warn');return;}
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>فاتورة رقم ${i.no}</title><style>
+  *{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#111;margin:0;padding:18px;background:#fff}.receipt{max-width:760px;margin:0 auto;border:1px solid #ddd;padding:22px}.head{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:15px}.head h1{font-size:23px;margin:0 0 4px}.muted{color:#555;font-size:12px}.row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dashed #bbb;font-size:14px}.total{font-size:20px;font-weight:700;border-top:2px solid #111;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between}table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}th,td{padding:7px 5px;border-bottom:1px solid #ddd;text-align:right}th{background:#f5f5f5}.print-actions{text-align:center;margin:18px 0}button{padding:10px 20px;border:0;background:#155eef;color:#fff;border-radius:6px;font-weight:700}@page{size:auto;margin:12mm}@media print{.print-actions{display:none}.receipt{border:none;padding:0;max-width:none}}
+  </style></head><body><div class="receipt"><div class="head"><h1>PS Cafe Manager</h1><div class="muted">فاتورة رقم #${i.no} • ${esc(fmt(i.date))}</div></div>
+  <div class="row"><span>الجهاز</span><strong>${esc(i.deviceName)} — ${esc(i.mode)}</strong></div>${i.sessionType==='match'?`<div class="row"><span>نوع الجلسة</span><strong>مباراة ${i.matchMins} دقيقة</strong></div>`:''}<div class="row"><span>العميل</span><strong>${esc(i.customer||'—')}</strong></div><div class="row"><span>المدة الفعلية</span><strong>${i.minutes} دقيقة</strong></div><div class="row"><span>رسوم اللعب</span><strong>${money(i.playTotal)} ج</strong></div>${itemRows?`<table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${itemRows}</tbody></table>`:''}<div class="row"><span>رسوم المشروبات</span><strong>${money(i.drinkTotal)} ج</strong></div><div class="total"><span>الإجمالي</span><span>${money(i.total)} ج</span></div></div><div class="print-actions"><button onclick="window.print()">طباعة / حفظ PDF</button></div></body></html>`);
+  w.document.close();w.focus();
 }
 
 // ============================================================
@@ -1004,34 +1070,44 @@ function saveUser(uid){let n=val('un').trim();if(!n)return alert('اكتب اس�
 // ============================================================
 // SETTINGS
 // ============================================================
-function rSettings(){let s=st();vSettings.innerHTML=`
+function rSettings(){let s=st(),sm=syncMeta(),ns=notificationState();let syncClass=s.mode!=='supabase'?'status-warn':(sm.verified?'status-good':'status-warn');vSettings.innerHTML=`
   <div class="page-header">
-    <div class="page-header-left"><div class="section-title">⚙️ الإعدادات والمزامنة</div><div class="page-subtitle muted">إعدادات الاتصال والبيانات</div></div>
+    <div class="page-header-left"><div class="section-title">⚙️ الإعدادات والمزامنة</div><div class="page-subtitle muted">إعدادات الاتصال والبيانات • ${APP_VERSION}</div></div>
   </div>
   <div class="settings-section">
     <div class="big" style="font-size:16px;margin-bottom:12px">🌐 المزامنة Online</div>
-    <div class="settings-note">Hybrid Mode: لو النت فصل، البرنامج يكمل Offline ويحفظ العمليات في قائمة انتظار. لما النت يرجع يعمل Auto Sync تلقائياً.</div>
-    <div class="kpi" style="margin-bottom:14px">
-      <div class="kpi-label">حالة الشبكة</div>
-      <b style="font-size:16px">${navigator.onLine?'🟢 متصل':'🔴 غير متصل'}</b>
-      <div class="small muted" style="margin-top:4px">عمليات في الانتظار: <strong>${queue().length}</strong></div>
+    <div class="settings-note">Hybrid Mode: لو النت فصل، البرنامج يكمل Offline ويحفظ العمليات في قائمة انتظار. لا تظهر علامة نجاح المزامنة إلا بعد نجاح اتصال فعلي بـ Supabase.</div>
+    <div class="status-panel ${syncClass}">
+      <div><strong>الشبكة:</strong> ${navigator.onLine?'🟢 متصل':'🔴 غير متصل'}</div>
+      <div><strong>حالة Supabase:</strong> ${s.mode!=='supabase'?'غير مفعّل — بيانات الجهاز فقط':(sm.syncing?'جاري المزامنة…':(sm.verified?(sm.lastSuccess?'تمت المزامنة ✓':'الاتصال سليم — لم تتم المزامنة بعد'):'لم يتم التحقق بعد'))}</div>
+      <div><strong>آخر مزامنة ناجحة:</strong> ${shortTime(sm.lastSuccess)}</div>
+      <div><strong>عمليات في الانتظار:</strong> ${queue().length}</div>
+      ${sm.lastError?`<div style="color:var(--red)"><strong>آخر خطأ:</strong> ${esc(sm.lastError)}</div>`:''}
     </div>
-    <div class="grid g2">
+    <div class="grid g2 mt">
       <div class="col"><label>وضع المزامنة</label><select id="mode"><option value="offline" ${s.mode==='offline'?'selected':''}>Offline فقط</option><option value="supabase" ${s.mode==='supabase'?'selected':''}>Hybrid Supabase</option></select></div>
       <div class="col"><label>Supabase URL</label><input id="url" value="${esc(s.url)}" placeholder="https://xxx.supabase.co"></div>
       <div class="col" style="grid-column:1/-1"><label>Anon Key</label><textarea id="key" rows="3" placeholder="eyJ...">${esc(s.key)}</textarea></div>
     </div>
-    <div class="row mt">
-      <button class="ok" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+    <div class="settings-actions">
+      <button class="ok" onclick="saveSettings()">💾 حفظ واختبار الاتصال</button>
       <button class="ok" onclick="manualSync()">🔄 مزامنة الآن</button>
       <button onclick="showQueue()">📋 عرض الانتظار</button>
     </div>
   </div>
   <div class="settings-section">
     <div class="big" style="font-size:16px;margin-bottom:12px">🔔 إعدادات التنبيهات</div>
-    <div class="settings-note">التنبيهات تعمل تلقائياً للمباريات المحددة الوقت: قبل 10 دقائق (تحذير)، قبل 5 دقائق (خطر)، عند الانتهاء، وبعد التجاوز بـ 5 دقائق.</div>
-    <button onclick="reqNotifPerm();alert('${Notification&&Notification.permission==='granted'?'الإشعارات مفعلة ✓':'اضغط السماح في نافذة المتصفح'}')">🔔 تفعيل الإشعارات</button>
-    <span style="font-size:12px;color:var(--text-muted);margin-right:10px">الحالة: ${(typeof Notification!=='undefined')?Notification.permission:'غير مدعوم'}</span>
+    <div class="settings-note">التنبيهات تعمل للمباريات المحددة الوقت. لا يتم طلب إذن المتصفح تلقائيًا؛ اضغط الزر أدناه لتفعيلها بإرادتك.</div>
+    <div class="status-panel ${ns.cls}"><strong>الحالة:</strong> ${ns.label}</div>
+    <div class="settings-actions"><button class="btn-blue" onclick="enableNotifications()">🔔 تفعيل الإشعارات</button></div>
+  </div>
+  <div class="settings-section">
+    <div class="big" style="font-size:16px;margin-bottom:12px">📲 إصدار التطبيق والتحديث</div>
+    <div class="status-panel status-good"><strong>الإصدار الحالي:</strong> ${APP_VERSION}<br><span class="muted small">فحص التحديث لا يمسح بيانات المحل المحفوظة على الجهاز.</span></div>
+    <div class="settings-actions">
+      <button class="btn-blue" onclick="checkForUpdate()">🔎 فحص تحديث جديد</button>
+      <button class="gray" onclick="clearAppCacheAndReload()">♻️ تحديث إجباري آمن</button>
+    </div>
   </div>
   <div class="settings-section">
     <div class="big" style="font-size:16px;margin-bottom:12px">💾 البيانات والنسخ الاحتياطي</div>
@@ -1046,9 +1122,14 @@ function rSettings(){let s=st();vSettings.innerHTML=`
     </div>
   </div>`
 }
-function saveSettings(){setst({mode:val('mode'),url:val('url').trim().replace(/\/$/,''),key:val('key').trim()});alert('تم الحفظ')}
+async function saveSettings(){
+  const cfg={mode:val('mode'),url:val('url').trim().replace(/\/$/,''),key:val('key').trim()};
+  if(cfg.mode==='supabase'&&(!cfg.url||!cfg.key)){showNotice('أدخل Supabase URL و Anon Key أولاً.', 'danger');return;}
+  localStorage.setItem(SK,JSON.stringify(cfg));setSyncMeta({verified:false,lastError:'',syncing:false});setup();render();
+  if(cfg.mode==='supabase') await testSupabaseConnection(); else showNotice('تم الحفظ: التطبيق يعمل Offline فقط.', 'success');
+}
 function exportBackup(){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));a.download='ps_backup_'+today()+'.json';a.click()}
-function importBackup(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{state=JSON.parse(r.result);save()};r.readAsText(f)}
+function importBackup(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let incoming=JSON.parse(r.result);if(!incoming||!Array.isArray(incoming.devices)||!Array.isArray(incoming.invoices))throw Error('صيغة غير صحيحة');state=incoming;save();showNotice('تم استيراد النسخة الاحتياطية بنجاح.', 'success')}catch(err){showNotice('ملف النسخة الاحتياطية غير صالح.', 'danger')}};r.readAsText(f)}
 function resetAll(){if(confirm('حذف كل البيانات؟')){state=def();save()}}
 
 // ============================================================
@@ -1072,13 +1153,77 @@ function showQueue(){let q=queue();modal(`<div class="big">📋 قائمة ان�
 // ============================================================
 // SUPABASE / SYNC
 // ============================================================
-async function req(m,path,body){let s=st();if(!navigator.onLine)throw Error('لا يوجد اتصال بالإنترنت');if(!s.url||!s.key)throw Error('بيانات Supabase غير مكتملة');let r=await fetch(s.url+'/rest/v1/'+path,{method:m,headers:{apikey:s.key,Authorization:'Bearer '+s.key,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:body?JSON.stringify(body):undefined});if(!r.ok)throw Error(await r.text());return await r.json()}
-async function loadCloud(){let rows=await req('GET','ps_cafe_state?id=eq.main&select=*');if(rows&&rows[0]&&!dirty&&queue().length===0){state=rows[0].data;localStorage.setItem(K,JSON.stringify(state));render();return true}return !!(rows&&rows[0])}
-async function saveCloud(){await req('POST','ps_cafe_state',[{id:'main',data:state,updated_at:new Date().toISOString()}]);dirty=false;setQueue([]);render();return true}
-async function flushQueue(){if(st().mode!=='supabase')return false;if(!navigator.onLine)throw Error('النت غير متصل. تم حفظ العملية Offline وستتم المزامنة تلقائيًا.');let q=queue();if(q.length){state=q[q.length-1].state;localStorage.setItem(K,JSON.stringify(state))}await saveCloud();return true}
-async function manualSync(){if(st().mode!=='supabase')return alert('فعل Hybrid Supabase من الإعدادات أولا');try{await flushQueue();await loadCloud();alert('تمت المزامنة بنجاح')}catch(e){render();alert('لم تتم المزامنة الآن: '+e.message)}}
-function sched(){if(st().mode==='supabase'){clearTimeout(window.sd);window.sd=setTimeout(()=>flushQueue().catch(e=>{console.warn(e.message);render()}),1200)}}
-function setup(){clearInterval(timer);window.removeEventListener('online',window.__psOnline||(()=>{}));window.__psOnline=()=>{if(st().mode==='supabase')flushQueue().catch(console.warn)};window.addEventListener('online',window.__psOnline);if(st().mode==='supabase')timer=setInterval(()=>{if(dirty||queue().length)flushQueue().catch(e=>{console.warn(e.message);render()});else loadCloud().catch(console.warn)},15000)}
+function friendlySyncError(status,raw){
+  const txt=String(raw||'');
+  if(status===401||status===403)return 'رفض Supabase الاتصال. راجع المفتاح أو سياسات RLS.';
+  if(status===404)return 'جدول ps_cafe_state غير موجود في Supabase.';
+  if(/Failed to fetch|NetworkError/i.test(txt))return 'تعذر الوصول إلى Supabase. افحص الإنترنت أو الرابط.';
+  return 'تعذر إتمام المزامنة ('+status+').';
+}
+async function req(m,path,body){
+  let s=st();
+  if(!navigator.onLine)throw Error('لا يوجد اتصال بالإنترنت. البيانات محفوظة على الجهاز.');
+  if(!s.url||!s.key)throw Error('بيانات Supabase غير مكتملة.');
+  let r;
+  try{r=await fetch(s.url+'/rest/v1/'+path,{method:m,headers:{apikey:s.key,Authorization:'Bearer '+s.key,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:body?JSON.stringify(body):undefined})}
+  catch(err){throw Error('تعذر الوصول إلى Supabase. افحص الإنترنت أو الرابط.');}
+  const raw=await r.text();
+  if(!r.ok)throw Error(friendlySyncError(r.status,raw));
+  try{return raw?JSON.parse(raw):[]}catch(e){return []}
+}
+async function testSupabaseConnection(){
+  setSyncMeta({syncing:true,lastError:''});
+  try{
+    await req('GET','ps_cafe_state?id=eq.main&select=id,updated_at');
+    setSyncMeta({verified:true,syncing:false,lastError:''});
+    showNotice('تم الاتصال بـ Supabase بنجاح. اضغط مزامنة الآن لرفع البيانات.', 'success');
+    return true;
+  }catch(e){
+    setSyncMeta({verified:false,syncing:false,lastError:e.message});
+    showNotice('فشل اختبار الاتصال: '+e.message, 'danger');return false;
+  }
+}
+async function loadCloud(){
+  let rows=await req('GET','ps_cafe_state?id=eq.main&select=*');
+  setSyncMeta({verified:true,syncing:false,lastError:''});
+  if(rows&&rows[0]&&!dirty&&queue().length===0){state=rows[0].data;localStorage.setItem(K,JSON.stringify(state));render();}
+  return !!(rows&&rows[0]);
+}
+async function saveCloud(){
+  await req('POST','ps_cafe_state',[{id:'main',data:state,updated_at:new Date().toISOString()}]);
+  dirty=false;setQueue([]);setSyncMeta({verified:true,syncing:false,lastSuccess:new Date().toISOString(),lastError:''});render();return true;
+}
+async function flushQueue(){
+  if(st().mode!=='supabase')return false;
+  if(!navigator.onLine)throw Error('النت غير متصل. تم حفظ العملية Offline وستتم المزامنة تلقائيًا.');
+  setSyncMeta({syncing:true,lastError:''});
+  let q=queue();if(q.length){state=q[q.length-1].state;localStorage.setItem(K,JSON.stringify(state))}
+  await saveCloud();return true;
+}
+async function manualSync(){
+  if(st().mode!=='supabase'){showNotice('فعّل Hybrid Supabase من الإعدادات أولاً.', 'warn');return;}
+  try{await flushQueue();await loadCloud();showNotice('تمت المزامنة بنجاح مع Supabase ✓', 'success')}
+  catch(e){setSyncMeta({verified:false,syncing:false,lastError:e.message});render();showNotice('لم تتم المزامنة: '+e.message, 'danger')}
+}
+function sched(){if(st().mode==='supabase'){clearTimeout(window.sd);window.sd=setTimeout(()=>flushQueue().catch(e=>{setSyncMeta({verified:false,syncing:false,lastError:e.message});console.warn(e.message);render()}),1200)}}
+function setup(){clearInterval(timer);window.removeEventListener('online',window.__psOnline||(()=>{}));window.__psOnline=()=>{if(st().mode==='supabase')flushQueue().catch(e=>setSyncMeta({verified:false,syncing:false,lastError:e.message}))};window.addEventListener('online',window.__psOnline);if(st().mode==='supabase')timer=setInterval(()=>{if(dirty||queue().length)flushQueue().catch(e=>{setSyncMeta({verified:false,syncing:false,lastError:e.message});console.warn(e.message);render()});else loadCloud().catch(e=>{setSyncMeta({verified:false,syncing:false,lastError:e.message});console.warn(e.message)})},15000)}
+
+async function checkForUpdate(){
+  try{
+    if(!('serviceWorker' in navigator)){showNotice('التحديث التلقائي غير مدعوم هنا.', 'warn');return;}
+    const reg=swRegistration||await navigator.serviceWorker.getRegistration();
+    if(!reg){showNotice('Service Worker غير مسجل بعد. أعد فتح التطبيق.', 'warn');return;}
+    await reg.update();showNotice('تم فحص التحديث. لو توجد نسخة جديدة سيتم تحميلها عند إعادة الفتح.', 'success');
+  }catch(e){showNotice('تعذر فحص التحديث الآن.', 'danger')}
+}
+async function clearAppCacheAndReload(){
+  if(!confirm('تحديث ملفات التطبيق الآن؟ لن يتم حذف البيانات أو الفواتير المحفوظة.'))return;
+  try{
+    const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('ps-cafe-')).map(k=>caches.delete(k)));
+    if(swRegistration)await swRegistration.update();
+    location.reload(true);
+  }catch(e){showNotice('تعذر تحديث الكاش الآن.', 'danger')}
+}
 
 load();setup();
 </script>
@@ -1087,11 +1232,15 @@ load();setup();
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('./sw.js')
+    navigator.serviceWorker.register('./sw.js?v=6.1.1')
       .then(reg=>{
-        console.log('SW registered:', reg.scope);
-        // Check for updates every 60s
+        swRegistration=reg;
+        console.log('SW registered:', reg.scope, APP_VERSION);
         setInterval(()=>reg.update(), 60000);
+        reg.addEventListener('updatefound', ()=>{
+          const next=reg.installing;if(!next)return;
+          next.addEventListener('statechange', ()=>{if(next.state==='installed'&&navigator.serviceWorker.controller)showNotice('يوجد تحديث جديد. استخدم التحديث الإجباري الآمن من الإعدادات.', 'info')});
+        });
       })
       .catch(err=>console.warn('SW registration failed:', err));
   });
